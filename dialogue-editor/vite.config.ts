@@ -4,7 +4,7 @@ export default defineConfig({
   clearScreen: false,
   server: {
     host: "dialogue.local",
-    port: 80,
+    port: 3000,
     strictPort: false,
     watch: {
       ignored: ["**/src-tauri/**"],
