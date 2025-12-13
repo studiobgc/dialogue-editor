@@ -87,8 +87,54 @@ class DialogueEditor {
     // Add help button
     this.addHelpButton();
 
+    // Add performance monitor (dev mode)
+    this.addPerfMonitor();
+
     // Load current project if exists
     this.loadCurrentProject();
+  }
+
+  private addPerfMonitor(): void {
+    const monitor = document.createElement('div');
+    monitor.className = 'perf-monitor';
+    monitor.id = 'perf-monitor';
+    monitor.innerHTML = `
+      <div class="perf-monitor-item">
+        <span class="perf-monitor-label">FPS:</span>
+        <span class="perf-monitor-value good" id="perf-fps">60</span>
+      </div>
+      <div class="perf-monitor-item">
+        <span class="perf-monitor-label">Frame:</span>
+        <span class="perf-monitor-value" id="perf-frame">0.0ms</span>
+      </div>
+      <div class="perf-monitor-item">
+        <span class="perf-monitor-label">Nodes:</span>
+        <span class="perf-monitor-value" id="perf-nodes">0</span>
+      </div>
+    `;
+    document.body.appendChild(monitor);
+
+    // Update stats periodically
+    setInterval(() => {
+      const stats = this.renderer.getRenderStats();
+      if (stats) {
+        const fpsEl = document.getElementById('perf-fps');
+        const frameEl = document.getElementById('perf-frame');
+        const nodesEl = document.getElementById('perf-nodes');
+
+        if (fpsEl) {
+          fpsEl.textContent = stats.fps.toString();
+          fpsEl.className = 'perf-monitor-value ' + 
+            (stats.fps >= 55 ? 'good' : stats.fps >= 30 ? 'warning' : 'bad');
+        }
+        if (frameEl) {
+          frameEl.textContent = stats.frameTime.toFixed(1) + 'ms';
+        }
+        if (nodesEl) {
+          nodesEl.textContent = this.model.getNodes().length.toString();
+        }
+      }
+    }, 500);
   }
 
   private loadCurrentProject(): void {

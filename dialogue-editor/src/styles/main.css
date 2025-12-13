@@ -1318,3 +1318,69 @@ input, textarea, select {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* ==================== PERFORMANCE MONITOR ==================== */
+
+.perf-monitor {
+  position: fixed;
+  bottom: 40px;
+  left: 260px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #7ed321;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  gap: 12px;
+}
+
+.perf-monitor-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.perf-monitor-label {
+  color: var(--text-secondary);
+}
+
+.perf-monitor-value {
+  font-weight: 600;
+}
+
+.perf-monitor-value.good {
+  color: #7ed321;
+}
+
+.perf-monitor-value.warning {
+  color: #f39c12;
+}
+
+.perf-monitor-value.bad {
+  color: #ef4444;
+}
+
+/* ==================== SMOOTH TRANSITIONS ==================== */
+
+.toolbar-button,
+.palette-item,
+.property-input,
+.ai-chat-send-btn,
+.project-card {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* GPU acceleration hints */
+#graph-canvas {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.ai-chat-panel,
+.properties-panel,
+.palette {
+  will-change: scroll-position;
+}

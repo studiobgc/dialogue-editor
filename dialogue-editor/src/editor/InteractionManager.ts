@@ -189,9 +189,12 @@ export class InteractionManager {
     e.preventDefault();
 
     const screenPos = this.getScreenPos(e);
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    
+    // Smooth zoom with momentum - smaller steps for smoother feel
+    const zoomIntensity = 0.002;
+    const delta = -e.deltaY * zoomIntensity;
     const currentZoom = this.viewport.getZoom();
-    const newZoom = currentZoom * zoomFactor;
+    const newZoom = currentZoom * (1 + delta);
 
     this.viewport.setZoom(newZoom, screenPos.x, screenPos.y);
     this.renderer.requestRender();
