@@ -158,11 +158,22 @@ html, body {
 }
 
 #properties-panel {
-  width: 320px;
+  width: 280px;
+  min-width: 280px;
   background: var(--bg-secondary);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
   padding: 16px;
+}
+
+#ai-chat {
+  width: 340px;
+  min-width: 340px;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .properties-header {
@@ -834,9 +845,8 @@ html, body {
 /* ==================== AI CHAT PANEL ==================== */
 
 .ai-chat-container {
-  width: 380px;
+  width: 100%;
   height: 100%;
-  border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);

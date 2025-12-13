@@ -47,15 +47,10 @@ export class AIChat {
   ) {
     const container = document.getElementById(containerId);
     if (!container) {
-      // Create the container if it doesn't exist
-      const newContainer = document.createElement('div');
-      newContainer.id = containerId;
-      newContainer.className = 'ai-chat-container';
-      document.getElementById('main-container')?.appendChild(newContainer);
-      this.container = newContainer;
-    } else {
-      this.container = container;
+      throw new Error(`AI Chat container not found: ${containerId}`);
     }
+    this.container = container;
+    this.container.className = 'ai-chat-container';
     
     this.onApplyDialogue = onApplyDialogue;
     this.onSendMessage = onSendMessage;
