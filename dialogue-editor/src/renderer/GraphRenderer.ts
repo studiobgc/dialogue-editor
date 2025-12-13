@@ -7,6 +7,9 @@ import { GraphModel } from '../core/GraphModel';
 import { Viewport } from './Viewport';
 import { NodeRenderer } from './NodeRenderer';
 import { ConnectionRenderer } from './ConnectionRenderer';
+import { RenderLoop, RenderStats } from './RenderLoop';
+import { SpatialIndex } from './SpatialIndex';
+import { NodeCache } from './NodeCache';
 
 export interface GridStyle {
   minorGridSize: number;
@@ -32,6 +35,13 @@ export class GraphRenderer {
   private connectionRenderer: ConnectionRenderer;
   private gridStyle: GridStyle;
   
+  // Performance optimizations
+  private renderLoop: RenderLoop;
+  private spatialIndex: SpatialIndex;
+  private nodeCache: NodeCache;
+  private lastModel: GraphModel | null = null;
+  private renderStats: RenderStats | null = null;
+  
   private selectedNodeIds: Set<string> = new Set();
   private hoveredNodeId: string | null = null;
   private selectedConnectionIds: Set<string> = new Set();
@@ -40,8 +50,12 @@ export class GraphRenderer {
   private connectionPreview: { from: Position; to: Position; isValid: boolean } | null = null;
   private selectionBox: { start: Position; end: Position } | null = null;
 
-  private animationFrameId: number | null = null;
   private needsRender = true;
+  
+  // Smooth animation state
+  private targetZoom: number = 1;
+  private targetPan: Position = { x: 0, y: 0 };
+  private isAnimating: boolean = false;
 
   constructor(canvas: HTMLCanvasElement, gridStyle?: Partial<GridStyle>) {
     this.canvas = canvas;
@@ -51,9 +65,19 @@ export class GraphRenderer {
     this.viewport = new Viewport(canvas.width, canvas.height);
     this.nodeRenderer = new NodeRenderer();
     this.connectionRenderer = new ConnectionRenderer(this.nodeRenderer);
+    
+    // Initialize performance systems
+    this.renderLoop = new RenderLoop();
+    this.spatialIndex = new SpatialIndex(200);
+    this.nodeCache = new NodeCache();
 
     this.setupCanvas();
     this.startRenderLoop();
+    
+    // Track render stats
+    this.renderLoop.onStats((stats) => {
+      this.renderStats = stats;
+    });
   }
 
   /**
@@ -144,26 +168,83 @@ export class GraphRenderer {
 
   requestRender(): void {
     this.needsRender = true;
+    this.renderLoop.requestRender();
   }
 
   private startRenderLoop(): void {
-    const loop = () => {
-      if (this.needsRender) {
-        this.needsRender = false;
+    this.renderLoop.start((deltaTime) => {
+      if (this.lastModel) {
+        this.updateAnimations(deltaTime);
+        this.renderInternal(this.lastModel);
       }
-      this.animationFrameId = requestAnimationFrame(loop);
-    };
-    loop();
+    });
+  }
+  
+  private updateAnimations(deltaTime: number): void {
+    if (!this.isAnimating) return;
+    
+    const lerpFactor = Math.min(1, deltaTime * 0.01); // Smooth interpolation
+    const currentZoom = this.viewport.getZoom();
+    const currentPan = this.viewport.getPan();
+    
+    // Lerp zoom
+    const newZoom = currentZoom + (this.targetZoom - currentZoom) * lerpFactor;
+    if (Math.abs(newZoom - this.targetZoom) > 0.001) {
+      this.viewport.setZoom(newZoom);
+    }
+    
+    // Lerp pan
+    const newPanX = currentPan.x + (this.targetPan.x - currentPan.x) * lerpFactor;
+    const newPanY = currentPan.y + (this.targetPan.y - currentPan.y) * lerpFactor;
+    if (Math.abs(newPanX - this.targetPan.x) > 0.5 || Math.abs(newPanY - this.targetPan.y) > 0.5) {
+      this.viewport.setPan(newPanX, newPanY);
+      this.requestRender();
+    } else {
+      this.isAnimating = false;
+    }
+  }
+  
+  /**
+   * Animate to a target zoom and pan
+   */
+  animateTo(zoom: number, panX: number, panY: number): void {
+    this.targetZoom = zoom;
+    this.targetPan = { x: panX, y: panY };
+    this.isAnimating = true;
+    this.requestRender();
+  }
+  
+  /**
+   * Get current render stats
+   */
+  getRenderStats(): RenderStats | null {
+    return this.renderStats;
   }
 
   /**
    * Render the entire graph
    */
   render(model: GraphModel): void {
+    this.lastModel = model;
+    
+    // Update spatial index if nodes changed
+    const nodes = model.getNodes();
+    this.spatialIndex.rebuild(nodes);
+    
+    this.requestRender();
+  }
+  
+  /**
+   * Internal render called by render loop
+   */
+  private renderInternal(model: GraphModel): void {
     const nodes = model.getNodes();
     const connections = model.getConnections();
+    
+    // Get visible bounds for culling
+    const visibleBounds = this.viewport.getVisibleBounds();
 
-    // Clear canvas
+    // Clear canvas with optimized clear
     this.ctx.fillStyle = this.gridStyle.backgroundColor;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -173,7 +254,7 @@ export class GraphRenderer {
     // Apply viewport transform
     this.viewport.applyTransform(this.ctx);
 
-    // Draw grid
+    // Draw grid (skip if zoomed out too far)
     this.drawGrid();
 
     // Build node map for quick lookups
@@ -192,9 +273,22 @@ export class GraphRenderer {
       }
     }
     this.nodeRenderer.setConnectedPorts(connectedPorts);
+    
+    // Get visible node IDs using spatial index
+    const visibleNodeIds = this.spatialIndex.queryRect(
+      visibleBounds.minX,
+      visibleBounds.minY,
+      visibleBounds.maxX - visibleBounds.minX,
+      visibleBounds.maxY - visibleBounds.minY
+    );
 
-    // Draw connections (behind nodes)
+    // Draw connections (behind nodes) - only for visible nodes
     for (const connection of connections) {
+      // Skip if neither endpoint is visible
+      if (!visibleNodeIds.has(connection.fromNodeId) && !visibleNodeIds.has(connection.toNodeId)) {
+        continue;
+      }
+      
       const isSelected = this.selectedConnectionIds.has(connection.id);
       const isHovered = this.hoveredConnectionId === connection.id;
       this.connectionRenderer.renderConnection(
@@ -217,8 +311,10 @@ export class GraphRenderer {
       );
     }
 
-    // Draw nodes
+    // Draw only visible nodes
     for (const node of nodes) {
+      if (!visibleNodeIds.has(node.id)) continue;
+      
       const isSelected = this.selectedNodeIds.has(node.id);
       const isHovered = this.hoveredNodeId === node.id;
       this.nodeRenderer.renderNode(this.ctx, node, this.viewport, isSelected, isHovered);
@@ -382,8 +478,22 @@ export class GraphRenderer {
    * Cleanup
    */
   destroy(): void {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+    this.renderLoop.stop();
+    this.nodeCache.clear();
+  }
+  
+  /**
+   * Invalidate node cache for a specific node
+   */
+  invalidateNode(nodeId: string): void {
+    this.nodeCache.invalidate(nodeId);
+    this.requestRender();
+  }
+  
+  /**
+   * Get spatial index for external use
+   */
+  getSpatialIndex(): SpatialIndex {
+    return this.spatialIndex;
   }
 }

@@ -60,9 +60,24 @@ export class Viewport {
   }
 
   /**
+   * Get current pan (alias for getOffset)
+   */
+  getPan(): Position {
+    return { x: this.offsetX, y: this.offsetY };
+  }
+
+  /**
    * Set offset
    */
   setOffset(x: number, y: number): void {
+    this.offsetX = x;
+    this.offsetY = y;
+  }
+
+  /**
+   * Set pan (alias for setOffset)
+   */
+  setPan(x: number, y: number): void {
     this.offsetX = x;
     this.offsetY = y;
   }
