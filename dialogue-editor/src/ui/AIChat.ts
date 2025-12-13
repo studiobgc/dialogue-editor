@@ -3,7 +3,8 @@
  * Integrates with the graph editor to create dialogue flows from natural language
  */
 
-import { NodeType, Position } from '../types/graph';
+import { NodeType } from '../types/graph';
+import { AIService } from '../services/AIService';
 
 export interface ChatMessage {
   id: string;
@@ -30,20 +31,18 @@ export interface GeneratedDialogue {
 }
 
 export type OnApplyDialogueCallback = (dialogue: GeneratedDialogue) => void;
-export type OnSendMessageCallback = (message: string) => Promise<string>;
 
 export class AIChat {
   private container: HTMLElement;
   private messages: ChatMessage[] = [];
   private onApplyDialogue: OnApplyDialogueCallback;
-  private onSendMessage: OnSendMessageCallback;
+  private aiService: AIService;
   private isExpanded: boolean = true;
   private isLoading: boolean = false;
 
   constructor(
     containerId: string,
-    onApplyDialogue: OnApplyDialogueCallback,
-    onSendMessage: OnSendMessageCallback
+    onApplyDialogue: OnApplyDialogueCallback
   ) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -51,9 +50,9 @@ export class AIChat {
     }
     this.container = container;
     this.container.className = 'ai-chat-container';
+    this.aiService = new AIService();
     
     this.onApplyDialogue = onApplyDialogue;
-    this.onSendMessage = onSendMessage;
     
     this.render();
     this.addSystemMessage();
@@ -86,8 +85,10 @@ I'll generate complete dialogue flows with branching choices, conditions, and ch
           <div class="ai-chat-title">
             <span class="ai-chat-icon">🤖</span>
             <span>AI Assistant</span>
+            ${this.aiService.hasApiKey() ? '<span class="ai-status connected">●</span>' : '<span class="ai-status disconnected">○</span>'}
           </div>
           <div class="ai-chat-header-actions">
+            <button class="ai-chat-btn-icon" id="ai-chat-settings" title="API Settings">⚙️</button>
             <button class="ai-chat-btn-icon" id="ai-chat-clear" title="Clear chat">🗑️</button>
             <button class="ai-chat-btn-icon" id="ai-chat-toggle" title="Toggle panel">
               ${this.isExpanded ? '◀' : '▶'}
@@ -131,8 +132,12 @@ I'll generate complete dialogue flows with branching choices, conditions, and ch
 
     clearBtn?.addEventListener('click', () => {
       this.messages = [];
+      this.aiService.clearHistory();
       this.addSystemMessage();
     });
+
+    const settingsBtn = document.getElementById('ai-chat-settings');
+    settingsBtn?.addEventListener('click', () => this.showSettings());
 
     sendBtn?.addEventListener('click', () => this.sendMessage());
 
@@ -165,7 +170,7 @@ I'll generate complete dialogue flows with branching choices, conditions, and ch
 
     try {
       // Get AI response
-      const response = await this.onSendMessage(message);
+      const response = await this.aiService.sendMessage(message);
       
       // Parse for dialogue data
       const dialogueData = this.parseDialogueFromResponse(response);
@@ -390,5 +395,63 @@ I'll generate complete dialogue flows with branching choices, conditions, and ch
 
   isOpen(): boolean {
     return this.isExpanded;
+  }
+
+  private showSettings(): void {
+    const currentKey = this.aiService.getApiKey();
+    const maskedKey = currentKey ? `${currentKey.substring(0, 8)}...${currentKey.substring(currentKey.length - 4)}` : '';
+    
+    const modal = document.createElement('div');
+    modal.className = 'ai-settings-modal';
+    modal.innerHTML = `
+      <div class="ai-settings-overlay"></div>
+      <div class="ai-settings-content">
+        <div class="ai-settings-header">
+          <h3>AI Settings</h3>
+          <button class="ai-settings-close">&times;</button>
+        </div>
+        <div class="ai-settings-body">
+          <p class="ai-settings-description">
+            Enter your Anthropic API key to enable real AI-powered dialogue generation.
+            Get your key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>
+          </p>
+          <div class="ai-settings-field">
+            <label>API Key</label>
+            <input type="password" id="ai-api-key-input" placeholder="sk-ant-..." value="${currentKey}">
+            ${maskedKey ? `<span class="ai-settings-current">Current: ${maskedKey}</span>` : ''}
+          </div>
+          <div class="ai-settings-status ${this.aiService.hasApiKey() ? 'connected' : ''}">
+            ${this.aiService.hasApiKey() ? '✓ Connected to Claude' : '○ Not connected'}
+          </div>
+        </div>
+        <div class="ai-settings-footer">
+          <button class="ai-settings-btn secondary" id="ai-settings-cancel">Cancel</button>
+          <button class="ai-settings-btn primary" id="ai-settings-save">Save</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = () => {
+      modal.classList.add('closing');
+      setTimeout(() => modal.remove(), 200);
+    };
+    
+    modal.querySelector('.ai-settings-overlay')?.addEventListener('click', closeModal);
+    modal.querySelector('.ai-settings-close')?.addEventListener('click', closeModal);
+    modal.querySelector('#ai-settings-cancel')?.addEventListener('click', closeModal);
+    
+    modal.querySelector('#ai-settings-save')?.addEventListener('click', () => {
+      const input = document.getElementById('ai-api-key-input') as HTMLInputElement;
+      const key = input?.value.trim();
+      if (key) {
+        this.aiService.setApiKey(key);
+        this.render();
+      }
+      closeModal();
+    });
+    
+    requestAnimationFrame(() => modal.classList.add('visible'));
   }
 }

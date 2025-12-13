@@ -63,8 +63,7 @@ class DialogueEditor {
     this.welcomeOverlay = new WelcomeOverlay(this.onTemplateSelected.bind(this));
     this.aiChat = new AIChat(
       'ai-chat',
-      this.onApplyDialogue.bind(this),
-      this.onAIMessage.bind(this)
+      this.onApplyDialogue.bind(this)
     );
     this.projectManager = new ProjectManager(this.onProjectChange.bind(this));
 
