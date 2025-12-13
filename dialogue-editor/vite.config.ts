@@ -6,6 +6,7 @@ export default defineConfig({
     host: "dialogue.local",
     port: 3000,
     strictPort: false,
+    allowedHosts: ["dialogue.local"],
     watch: {
       ignored: ["**/src-tauri/**"],
     },
