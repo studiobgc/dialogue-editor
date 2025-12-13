@@ -22,10 +22,10 @@ const DEFAULT_STYLE: ConnectionRenderStyle = {
   dataColor: '#4a90e2',
   selectedColor: '#7c3aed',
   hoveredColor: '#a78bfa',
-  lineWidth: 2,
-  selectedLineWidth: 3,
-  arrowSize: 8,
-  curveTension: 0.5
+  lineWidth: 2.5,
+  selectedLineWidth: 3.5,
+  arrowSize: 10,
+  curveTension: 0.6
 };
 
 export class ConnectionRenderer {
@@ -74,11 +74,35 @@ export class ConnectionRenderer {
     isValid: boolean
   ): void {
     ctx.save();
-    ctx.globalAlpha = 0.7;
-    ctx.setLineDash([8, 4]);
-
+    
     const color = isValid ? this.style.flowColor : '#ef4444';
-    this.drawBezierCurve(ctx, fromPos, toPos, color, this.style.lineWidth);
+    const glowColor = isValid ? 'rgba(126, 211, 33, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+    
+    // Draw glow effect
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.9;
+    
+    // Animated dash pattern
+    const time = Date.now() / 100;
+    ctx.setLineDash([12, 6]);
+    ctx.lineDashOffset = -time % 18;
+    
+    this.drawBezierCurve(ctx, fromPos, toPos, color, this.style.lineWidth + 1);
+    
+    // Draw target indicator circle
+    ctx.beginPath();
+    ctx.arc(toPos.x, toPos.y, 8, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(toPos.x, toPos.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
 
     ctx.restore();
   }
@@ -103,10 +127,21 @@ export class ConnectionRenderer {
       color = connectionType === 'flow' ? this.style.flowColor : this.style.dataColor;
     }
 
-    const lineWidth = isSelected ? this.style.selectedLineWidth : this.style.lineWidth;
+    const lineWidth = isSelected ? this.style.selectedLineWidth : 
+                      isHovered ? this.style.lineWidth + 1 : this.style.lineWidth;
+    
+    ctx.save();
+    
+    // Add glow effect for selected/hovered
+    if (isSelected || isHovered) {
+      ctx.shadowColor = isSelected ? 'rgba(124, 58, 237, 0.5)' : 'rgba(167, 139, 250, 0.4)';
+      ctx.shadowBlur = isSelected ? 10 : 6;
+    }
     
     this.drawBezierCurve(ctx, fromPos, toPos, color, lineWidth);
-    this.drawArrow(ctx, fromPos, toPos, color);
+    this.drawArrow(ctx, fromPos, toPos, color, isSelected || isHovered);
+    
+    ctx.restore();
   }
 
   /**
@@ -147,8 +182,10 @@ export class ConnectionRenderer {
     ctx: CanvasRenderingContext2D,
     from: Position,
     to: Position,
-    color: string
+    color: string,
+    isHighlighted: boolean = false
   ): void {
+    const arrowSize = isHighlighted ? this.style.arrowSize + 2 : this.style.arrowSize;
     const dx = to.x - from.x;
     const controlPointOffset = Math.min(Math.abs(dx) * this.style.curveTension, 150);
 
@@ -168,7 +205,6 @@ export class ConnectionRenderer {
                      3 * t * t * (p3.y - p2.y);
 
     const angle = Math.atan2(tangentY, tangentX);
-    const arrowSize = this.style.arrowSize;
 
     ctx.beginPath();
     ctx.fillStyle = color;

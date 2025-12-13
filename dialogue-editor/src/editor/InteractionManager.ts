@@ -416,6 +416,7 @@ export class InteractionManager {
     const nodes = this.model.getNodes();
     const targetNode = this.renderer.hitTestNode(nodes, worldPos);
     let isValid = false;
+    let snapPos = worldPos; // Position to snap to if over valid port
 
     if (targetNode && targetNode.id !== nodeId) {
       const targetPortHit = this.renderer.getNodeRenderer().hitTestPort(targetNode, worldPos);
@@ -426,13 +427,29 @@ export class InteractionManager {
         } else {
           isValid = this.model.canConnect(targetNode.id, targetPortHit.index, nodeId, portIndex);
         }
+        
+        // Snap to target port position for better visual feedback
+        if (isValid) {
+          snapPos = this.renderer.getNodeRenderer().getPortPosition(
+            targetNode, 
+            targetPortHit.type, 
+            targetPortHit.index
+          );
+          this.canvas.style.cursor = 'pointer';
+        } else {
+          this.canvas.style.cursor = 'not-allowed';
+        }
+      } else {
+        this.canvas.style.cursor = 'crosshair';
       }
+    } else {
+      this.canvas.style.cursor = 'crosshair';
     }
 
     if (portType === 'output') {
-      this.renderer.setConnectionPreview(portPos, worldPos, isValid);
+      this.renderer.setConnectionPreview(portPos, snapPos, isValid);
     } else {
-      this.renderer.setConnectionPreview(worldPos, portPos, isValid);
+      this.renderer.setConnectionPreview(snapPos, portPos, isValid);
     }
 
     this.render();

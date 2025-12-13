@@ -30,11 +30,11 @@ const DEFAULT_STYLE: NodeRenderStyle = {
   textColor: '#e4e4ef',
   selectedBorderColor: '#7c3aed',
   hoveredBorderColor: '#a78bfa',
-  portRadius: 6,
+  portRadius: 7,
   portColor: '#6b7280',
   portConnectedColor: '#7ed321',
-  cornerRadius: 8,
-  headerHeight: 28,
+  cornerRadius: 10,
+  headerHeight: 30,
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   fontSize: 12,
   titleFontSize: 13
@@ -137,21 +137,46 @@ export class NodeRenderer {
     node.inputPorts.forEach((port, i) => {
       const portY = y + inputSpacing * (i + 1);
       const isConnected = this.connectedPorts.has(port.id);
+      const portRadius = isHovered ? this.style.portRadius + 1 : this.style.portRadius;
       
+      // Outer glow for connected ports
+      if (isConnected) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(126, 211, 33, 0.5)';
+        ctx.shadowBlur = 8;
+      }
+      
+      // Port background
       ctx.beginPath();
-      ctx.arc(x, portY, this.style.portRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isConnected ? this.style.portConnectedColor : this.style.portColor;
+      ctx.arc(x, portY, portRadius, 0, Math.PI * 2);
+      ctx.fillStyle = isConnected ? this.style.portConnectedColor : 
+                      isHovered ? '#8b9199' : this.style.portColor;
       ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      
+      if (isConnected) {
+        ctx.restore();
+      }
+      
+      // Port border
+      ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = isHovered ? 2 : 1.5;
       ctx.stroke();
+      
+      // Inner highlight
+      if (isHovered && !isConnected) {
+        ctx.beginPath();
+        ctx.arc(x, portY, portRadius - 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fill();
+      }
 
-      // Draw port label if hovered
-      if (isHovered && port.label) {
-        ctx.fillStyle = this.style.textColor;
-        ctx.font = `11px ${this.style.fontFamily}`;
+      // Draw port label if hovered or always for labeled ports
+      if (port.label) {
+        ctx.fillStyle = isHovered ? '#ffffff' : this.style.textColor;
+        ctx.font = `${isHovered ? '600 ' : ''}11px ${this.style.fontFamily}`;
         ctx.textAlign = 'left';
-        ctx.fillText(port.label, x + 12, portY + 3);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(port.label, x + portRadius + 8, portY);
       }
     });
 
@@ -160,21 +185,46 @@ export class NodeRenderer {
     node.outputPorts.forEach((port, i) => {
       const portY = y + outputSpacing * (i + 1);
       const isConnected = this.connectedPorts.has(port.id);
+      const portRadius = isHovered ? this.style.portRadius + 1 : this.style.portRadius;
       
+      // Outer glow for connected ports
+      if (isConnected) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(126, 211, 33, 0.5)';
+        ctx.shadowBlur = 8;
+      }
+      
+      // Port background
       ctx.beginPath();
-      ctx.arc(x + width, portY, this.style.portRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isConnected ? this.style.portConnectedColor : this.style.portColor;
+      ctx.arc(x + width, portY, portRadius, 0, Math.PI * 2);
+      ctx.fillStyle = isConnected ? this.style.portConnectedColor : 
+                      isHovered ? '#8b9199' : this.style.portColor;
       ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      
+      if (isConnected) {
+        ctx.restore();
+      }
+      
+      // Port border
+      ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = isHovered ? 2 : 1.5;
       ctx.stroke();
+      
+      // Inner highlight
+      if (isHovered && !isConnected) {
+        ctx.beginPath();
+        ctx.arc(x + width, portY, portRadius - 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fill();
+      }
 
-      // Draw port label if hovered
-      if (isHovered && port.label) {
-        ctx.fillStyle = this.style.textColor;
-        ctx.font = `11px ${this.style.fontFamily}`;
+      // Draw port label - always show for output ports with labels
+      if (port.label) {
+        ctx.fillStyle = isHovered ? '#ffffff' : this.style.textColor;
+        ctx.font = `${isHovered ? '600 ' : ''}11px ${this.style.fontFamily}`;
         ctx.textAlign = 'right';
-        ctx.fillText(port.label, x + width - 12, portY + 3);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(port.label, x + width - portRadius - 8, portY);
       }
     });
   }
@@ -331,10 +381,10 @@ export class NodeRenderer {
   }
 
   /**
-   * Hit test for port click
+   * Hit test for port click - larger hit area for easier targeting
    */
   hitTestPort(node: Node, worldPos: Position): { type: 'input' | 'output'; index: number } | null {
-    const hitRadius = this.style.portRadius + 4;
+    const hitRadius = this.style.portRadius + 8; // Generous hit area
 
     // Check input ports
     for (let i = 0; i < node.inputPorts.length; i++) {
