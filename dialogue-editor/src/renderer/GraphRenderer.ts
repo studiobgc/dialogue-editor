@@ -330,44 +330,41 @@ export class GraphRenderer {
   }
 
   /**
-   * Draw the background grid
+   * Draw the background grid - optimized dot pattern like Figma
    */
   private drawGrid(): void {
     const bounds = this.viewport.getVisibleBounds();
     const zoom = this.viewport.getZoom();
 
-    // Only draw grid if zoomed in enough
-    if (zoom < 0.2) return;
+    // Fade out grid at low zoom levels
+    if (zoom < 0.15) return;
+    
+    const gridOpacity = Math.min(1, (zoom - 0.15) / 0.35);
 
-    // Draw minor grid
-    if (zoom > 0.5) {
-      this.ctx.strokeStyle = this.gridStyle.minorGridColor;
-      this.ctx.lineWidth = 1 / zoom;
-      this.ctx.beginPath();
-
+    // Draw dot grid for minor spacing (more subtle, Figma-like)
+    if (zoom > 0.4) {
+      const dotSize = Math.max(1, 1.5 / zoom);
       const minorSize = this.gridStyle.minorGridSize;
       const startX = Math.floor(bounds.minX / minorSize) * minorSize;
       const startY = Math.floor(bounds.minY / minorSize) * minorSize;
-
+      
+      this.ctx.fillStyle = `rgba(74, 74, 106, ${0.4 * gridOpacity})`;
+      
       for (let x = startX; x <= bounds.maxX; x += minorSize) {
-        if (x % this.gridStyle.majorGridSize !== 0) {
-          this.ctx.moveTo(x, bounds.minY);
-          this.ctx.lineTo(x, bounds.maxY);
+        for (let y = startY; y <= bounds.maxY; y += minorSize) {
+          // Skip major grid intersections
+          if (x % this.gridStyle.majorGridSize === 0 && y % this.gridStyle.majorGridSize === 0) {
+            continue;
+          }
+          this.ctx.beginPath();
+          this.ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+          this.ctx.fill();
         }
       }
-
-      for (let y = startY; y <= bounds.maxY; y += minorSize) {
-        if (y % this.gridStyle.majorGridSize !== 0) {
-          this.ctx.moveTo(bounds.minX, y);
-          this.ctx.lineTo(bounds.maxX, y);
-        }
-      }
-
-      this.ctx.stroke();
     }
 
-    // Draw major grid
-    this.ctx.strokeStyle = this.gridStyle.majorGridColor;
+    // Draw major grid lines (subtle)
+    this.ctx.strokeStyle = `rgba(54, 54, 82, ${0.6 * gridOpacity})`;
     this.ctx.lineWidth = 1 / zoom;
     this.ctx.beginPath();
 
@@ -387,15 +384,20 @@ export class GraphRenderer {
 
     this.ctx.stroke();
 
-    // Draw origin crosshair
-    this.ctx.strokeStyle = '#4a4a6a';
+    // Draw origin crosshair with glow
+    const originOpacity = Math.min(1, zoom);
+    this.ctx.save();
+    this.ctx.shadowColor = 'rgba(124, 58, 237, 0.3)';
+    this.ctx.shadowBlur = 8;
+    this.ctx.strokeStyle = `rgba(124, 58, 237, ${0.6 * originOpacity})`;
     this.ctx.lineWidth = 2 / zoom;
     this.ctx.beginPath();
-    this.ctx.moveTo(-20, 0);
-    this.ctx.lineTo(20, 0);
-    this.ctx.moveTo(0, -20);
-    this.ctx.lineTo(0, 20);
+    this.ctx.moveTo(-30, 0);
+    this.ctx.lineTo(30, 0);
+    this.ctx.moveTo(0, -30);
+    this.ctx.lineTo(0, 30);
     this.ctx.stroke();
+    this.ctx.restore();
   }
 
   /**

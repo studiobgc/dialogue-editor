@@ -45,6 +45,13 @@ export class InteractionManager {
   private lastClickTime = 0;
   private lastClickNodeId: string | null = null;
   private doubleClickThreshold = 300;
+  
+  // Inertia panning
+  private velocity: Position = { x: 0, y: 0 };
+  private lastPanTime: number = 0;
+  private inertiaAnimationId: number | null = null;
+  private readonly friction = 0.92;
+  private readonly minVelocity = 0.5;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -169,6 +176,10 @@ export class InteractionManager {
     const worldPos = this.viewport.toWorldCoords(screenPos);
 
     switch (this.dragState.type) {
+      case 'pan':
+        // Start inertia animation when pan ends
+        this.startInertia();
+        break;
       case 'selection':
         this.finishSelectionBox(worldPos);
         break;
@@ -183,6 +194,7 @@ export class InteractionManager {
       startWorldPos: { x: 0, y: 0 }
     };
 
+    this.canvas.style.cursor = 'default';
     this.renderer.setConnectionPreview(null, null);
     this.renderer.setSelectionBox(null, null);
   }
@@ -278,6 +290,15 @@ export class InteractionManager {
   // ==================== DRAG HANDLERS ====================
 
   private startPan(screenPos: Position, worldPos: Position): void {
+    // Stop any ongoing inertia animation
+    if (this.inertiaAnimationId !== null) {
+      cancelAnimationFrame(this.inertiaAnimationId);
+      this.inertiaAnimationId = null;
+    }
+    
+    this.velocity = { x: 0, y: 0 };
+    this.lastPanTime = performance.now();
+    
     this.dragState = {
       type: 'pan',
       startScreenPos: screenPos,
@@ -287,13 +308,50 @@ export class InteractionManager {
   }
 
   private handlePan(screenPos: Position): void {
+    const now = performance.now();
+    const dt = Math.max(1, now - this.lastPanTime);
+    
     const dx = screenPos.x - this.dragState.startScreenPos.x;
     const dy = screenPos.y - this.dragState.startScreenPos.y;
+    
+    // Calculate velocity for inertia
+    this.velocity = {
+      x: dx / dt * 16, // Normalize to ~60fps
+      y: dy / dt * 16
+    };
+    this.lastPanTime = now;
     
     this.viewport.pan(dx, dy);
     this.dragState.startScreenPos = screenPos;
     
     this.render();
+  }
+  
+  private startInertia(): void {
+    // Only start inertia if velocity is significant
+    const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+    if (speed < this.minVelocity) return;
+    
+    const animate = () => {
+      // Apply friction
+      this.velocity.x *= this.friction;
+      this.velocity.y *= this.friction;
+      
+      // Check if we should stop
+      const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+      if (speed < this.minVelocity) {
+        this.inertiaAnimationId = null;
+        return;
+      }
+      
+      // Apply velocity
+      this.viewport.pan(this.velocity.x, this.velocity.y);
+      this.render();
+      
+      this.inertiaAnimationId = requestAnimationFrame(animate);
+    };
+    
+    this.inertiaAnimationId = requestAnimationFrame(animate);
   }
 
   private handleNodeClick(node: Node, screenPos: Position, worldPos: Position, shiftKey: boolean): void {
