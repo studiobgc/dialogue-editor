@@ -10,7 +10,9 @@ import { Palette } from './ui/Palette';
 import { PropertiesPanel } from './ui/PropertiesPanel';
 import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
-import { WelcomeOverlay, Template, TEMPLATES } from './ui/WelcomeOverlay';
+import { WelcomeOverlay, Template } from './ui/WelcomeOverlay';
+import { AIChat, GeneratedDialogue } from './ui/AIChat';
+import { ProjectManager } from './ui/ProjectManager';
 import { Node, NodeType, Position } from './types/graph';
 import { NodeFactory } from './core/NodeFactory';
 
@@ -25,6 +27,8 @@ class DialogueEditor {
   private statusBar: StatusBar;
   private canvas: HTMLCanvasElement;
   private welcomeOverlay: WelcomeOverlay;
+  private aiChat: AIChat;
+  private projectManager: ProjectManager;
   private isFirstLaunch: boolean = true;
 
   constructor() {
@@ -57,6 +61,12 @@ class DialogueEditor {
     this.contextMenu = new ContextMenu();
     this.statusBar = new StatusBar('status-bar');
     this.welcomeOverlay = new WelcomeOverlay(this.onTemplateSelected.bind(this));
+    this.aiChat = new AIChat(
+      'ai-chat',
+      this.onApplyDialogue.bind(this),
+      this.onAIMessage.bind(this)
+    );
+    this.projectManager = new ProjectManager(this.onProjectChange.bind(this));
 
     // Setup toolbar actions
     this.setupToolbar();
@@ -76,6 +86,279 @@ class DialogueEditor {
 
     // Add help button
     this.addHelpButton();
+
+    // Load current project if exists
+    this.loadCurrentProject();
+  }
+
+  private loadCurrentProject(): void {
+    const project = this.projectManager.getCurrentProject();
+    if (project && project.graphData) {
+      try {
+        const loaded = GraphModel.fromJSON(project.graphData);
+        this.model.loadGraph(loaded.getGraph());
+        this.toolbar.setTitle(project.metadata.name);
+        this.render();
+      } catch (e) {
+        console.warn('Failed to load project:', e);
+      }
+    }
+  }
+
+  private onProjectChange(projectId: string, graphData: string | null): void {
+    if (graphData) {
+      try {
+        const loaded = GraphModel.fromJSON(graphData);
+        this.model.loadGraph(loaded.getGraph());
+      } catch (e) {
+        console.warn('Failed to load project data:', e);
+        this.model.newGraph('Untitled');
+      }
+    } else {
+      this.model.newGraph('Untitled');
+    }
+    
+    const project = this.projectManager.getCurrentProject();
+    if (project) {
+      this.toolbar.setTitle(project.metadata.name);
+    }
+    
+    this.render();
+    this.updateStatusBar();
+    this.hideCanvasHint();
+  }
+
+  private async onAIMessage(message: string): Promise<string> {
+    // This is where you'd integrate with an actual AI API
+    // For now, we'll simulate a response with dialogue generation
+    return this.generateDialogueResponse(message);
+  }
+
+  private generateDialogueResponse(userMessage: string): string {
+    // Parse user intent and generate appropriate dialogue
+    const lowerMsg = userMessage.toLowerCase();
+    
+    // Detect if user wants a quest dialogue
+    if (lowerMsg.includes('quest') || lowerMsg.includes('mission')) {
+      return this.generateQuestDialogue(userMessage);
+    }
+    
+    // Detect if user wants a shop/merchant dialogue
+    if (lowerMsg.includes('shop') || lowerMsg.includes('merchant') || lowerMsg.includes('buy') || lowerMsg.includes('sell')) {
+      return this.generateShopDialogue(userMessage);
+    }
+    
+    // Detect if user wants a conversation
+    if (lowerMsg.includes('conversation') || lowerMsg.includes('talk') || lowerMsg.includes('meet')) {
+      return this.generateConversationDialogue(userMessage);
+    }
+    
+    // Default: generate a simple branching dialogue
+    return this.generateSimpleDialogue(userMessage);
+  }
+
+  private generateQuestDialogue(context: string): string {
+    const dialogue: GeneratedDialogue = {
+      title: 'Quest Dialogue',
+      description: 'Generated from: ' + context.substring(0, 50),
+      characters: [
+        { name: 'Quest Giver', color: '#e74c3c' },
+        { name: 'Player', color: '#4a90e2' }
+      ],
+      nodes: [
+        { type: 'dialogue', speaker: 'Quest Giver', text: 'Ah, adventurer! I have a task that requires someone of your... particular skills.' },
+        { type: 'dialogueFragment', speaker: 'Quest Giver', text: 'There\'s an ancient artifact hidden in the ruins to the north. Many have tried to retrieve it. None have returned.' },
+        { type: 'branch', label: 'Player Response' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'Sounds dangerous. What\'s in it for me?', menuText: '[Negotiate] What\'s in it for me?' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'I\'ll do it. Point me in the right direction.', menuText: '[Accept] I\'ll do it.' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'Sorry, I\'m not interested in suicide missions.', menuText: '[Decline] Not interested.' },
+        { type: 'dialogueFragment', speaker: 'Quest Giver', text: 'Gold, of course. 500 pieces upon completion. And perhaps... something more valuable.' },
+        { type: 'dialogueFragment', speaker: 'Quest Giver', text: 'Excellent! Head north through the forest. You\'ll find the ruins at the base of the mountain.' },
+        { type: 'dialogueFragment', speaker: 'Quest Giver', text: 'A pity. If you change your mind, you know where to find me.' },
+        { type: 'instruction', instruction: 'StartQuest("ancient_artifact")' }
+      ],
+      connections: [
+        { from: 0, to: 1 },
+        { from: 1, to: 2 },
+        { from: 2, to: 3, label: 'Negotiate' },
+        { from: 2, to: 4, label: 'Accept' },
+        { from: 2, to: 5, label: 'Decline' },
+        { from: 3, to: 6 },
+        { from: 4, to: 7 },
+        { from: 5, to: 8 },
+        { from: 6, to: 4 },
+        { from: 7, to: 9 }
+      ]
+    };
+
+    return `Here's a quest dialogue I've created for you:\n\n**Quest Giver** offers a dangerous mission to retrieve an ancient artifact. The player can:\n- **Negotiate** for better rewards\n- **Accept** immediately\n- **Decline** the quest\n\nThe dialogue includes proper branching and an instruction node to start the quest.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
+  }
+
+  private generateShopDialogue(context: string): string {
+    const dialogue: GeneratedDialogue = {
+      title: 'Shop Dialogue',
+      characters: [
+        { name: 'Merchant', color: '#f39c12' },
+        { name: 'Player', color: '#4a90e2' }
+      ],
+      nodes: [
+        { type: 'dialogue', speaker: 'Merchant', text: 'Welcome, welcome! The finest goods in all the land, right here!' },
+        { type: 'hub', label: 'Shop Menu' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'Let me see what you have.', menuText: '[Browse] Show me your wares' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'I have some things to sell.', menuText: '[Sell] I want to sell' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'Just looking around.', menuText: '[Leave] Goodbye' },
+        { type: 'instruction', instruction: 'OpenShopUI("buy")' },
+        { type: 'instruction', instruction: 'OpenShopUI("sell")' },
+        { type: 'dialogueFragment', speaker: 'Merchant', text: 'Come back anytime!' }
+      ],
+      connections: [
+        { from: 0, to: 1 },
+        { from: 1, to: 2, label: 'Buy' },
+        { from: 1, to: 3, label: 'Sell' },
+        { from: 1, to: 4, label: 'Leave' },
+        { from: 2, to: 5 },
+        { from: 3, to: 6 },
+        { from: 4, to: 7 },
+        { from: 5, to: 1 },
+        { from: 6, to: 1 }
+      ]
+    };
+
+    return `Here's a shop dialogue with a menu system:\n\n**Merchant** greets the player with options to:\n- **Buy** - Opens the buy interface\n- **Sell** - Opens the sell interface\n- **Leave** - Exit the conversation\n\nThe hub node allows returning to the menu after transactions.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
+  }
+
+  private generateConversationDialogue(context: string): string {
+    const dialogue: GeneratedDialogue = {
+      title: 'Conversation',
+      characters: [
+        { name: 'Stranger', color: '#9b59b6' },
+        { name: 'Player', color: '#4a90e2' }
+      ],
+      nodes: [
+        { type: 'dialogue', speaker: 'Stranger', text: 'You\'re not from around here, are you?' },
+        { type: 'branch', label: 'Response' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'What gave it away?', menuText: '[Curious] What gave it away?' },
+        { type: 'dialogueFragment', speaker: 'Player', text: 'Mind your own business.', menuText: '[Hostile] Mind your business' },
+        { type: 'dialogueFragment', speaker: 'Stranger', text: 'The way you walk. The way you look at everything like it\'s the first time. Don\'t worry, your secret\'s safe with me.' },
+        { type: 'dialogueFragment', speaker: 'Stranger', text: 'Easy there. I meant no offense. Just making conversation.' },
+        { type: 'dialogueFragment', speaker: 'Stranger', text: 'If you need any help finding your way around, just ask. Name\'s Morgan.' }
+      ],
+      connections: [
+        { from: 0, to: 1 },
+        { from: 1, to: 2, label: 'Curious' },
+        { from: 1, to: 3, label: 'Hostile' },
+        { from: 2, to: 4 },
+        { from: 3, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 }
+      ]
+    };
+
+    return `Here's a conversation with a mysterious stranger:\n\nThe **Stranger** notices the player is new. Player can respond:\n- **Curious** - Friendly path, learns more\n- **Hostile** - Defensive, but stranger stays friendly\n\nBoth paths converge at the end.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
+  }
+
+  private generateSimpleDialogue(context: string): string {
+    return `I'd be happy to help you create dialogue! Here are some things I can generate:\n\n• **Quest dialogues** - "Create a quest where a wizard needs help"\n• **Shop interactions** - "Make a merchant dialogue with buy/sell"\n• **Character conversations** - "Write a conversation with a mysterious stranger"\n• **Branching choices** - "Create a dialogue with moral choices"\n\nTell me more about your game or the specific scene you're working on, and I'll create a complete dialogue flow for you!`;
+  }
+
+  private onApplyDialogue(dialogue: GeneratedDialogue): void {
+    // Add characters
+    for (const char of dialogue.characters) {
+      const existing = this.model.getCharacters().find(c => c.displayName === char.name);
+      if (!existing) {
+        this.model.addCharacter(char.name, char.color);
+      }
+    }
+
+    // Calculate starting position
+    const existingNodes = this.model.getNodes();
+    let startX = 100;
+    let startY = 100;
+    
+    if (existingNodes.length > 0) {
+      const maxX = Math.max(...existingNodes.map(n => n.position.x + n.size.width));
+      startX = maxX + 150;
+    }
+
+    // Create nodes
+    const createdNodes: Node[] = [];
+    const nodeSpacingX = 300;
+    const nodeSpacingY = 120;
+    let currentX = startX;
+    let currentY = startY;
+    let column = 0;
+
+    for (const nodeDef of dialogue.nodes) {
+      const node = this.model.addNode(nodeDef.type, { x: currentX, y: currentY });
+      createdNodes.push(node);
+
+      // Set node data based on type
+      if (nodeDef.type === 'dialogue' || nodeDef.type === 'dialogueFragment') {
+        if (node.data.type === 'dialogue' || node.data.type === 'dialogueFragment') {
+          const charId = this.model.getCharacters().find(c => c.displayName === nodeDef.speaker)?.id;
+          node.data.data.speaker = charId || '';
+          node.data.data.text = nodeDef.text || '';
+          if (nodeDef.menuText && node.data.type === 'dialogueFragment') {
+            node.data.data.menuText = nodeDef.menuText;
+          }
+        }
+      } else if (nodeDef.type === 'condition' && node.data.type === 'condition') {
+        node.data.data.script.expression = nodeDef.condition || '';
+      } else if (nodeDef.type === 'instruction' && node.data.type === 'instruction') {
+        node.data.data.script.expression = nodeDef.instruction || '';
+      } else if ((nodeDef.type === 'branch' || nodeDef.type === 'hub') && nodeDef.label) {
+        node.technicalName = nodeDef.label;
+      }
+
+      // Position nodes in a flowing layout
+      currentY += nodeSpacingY;
+      if (currentY > startY + nodeSpacingY * 3) {
+        currentY = startY;
+        currentX += nodeSpacingX;
+        column++;
+      }
+    }
+
+    // Create connections
+    for (const conn of dialogue.connections) {
+      const fromNode = createdNodes[conn.from];
+      const toNode = createdNodes[conn.to];
+      
+      if (fromNode && toNode) {
+        // Add output ports if needed for branch/hub nodes
+        if (fromNode.nodeType === 'branch' || fromNode.nodeType === 'hub') {
+          const existingConns = dialogue.connections.filter(c => c.from === conn.from);
+          const connIndex = existingConns.indexOf(conn);
+          while (fromNode.outputPorts.length <= connIndex) {
+            NodeFactory.addOutputPort(fromNode, conn.label);
+          }
+          if (conn.label && fromNode.outputPorts[connIndex]) {
+            fromNode.outputPorts[connIndex].label = conn.label;
+          }
+          this.model.addConnection(fromNode.id, connIndex, toNode.id, 0);
+        } else {
+          this.model.addConnection(fromNode.id, 0, toNode.id, 0);
+        }
+      }
+    }
+
+    this.render();
+    this.hideCanvasHint();
+    this.statusBar.setMessage(`Applied "${dialogue.title}" - ${createdNodes.length} nodes created`, 3000);
+    
+    // Auto-save project
+    this.autoSaveProject();
+  }
+
+  private autoSaveProject(): void {
+    const projectId = this.projectManager.getCurrentProjectId();
+    if (projectId) {
+      this.projectManager.saveCurrentProject(
+        this.model.toJSON(),
+        this.model.getNodes().length,
+        this.model.getCharacters().length
+      );
+    }
   }
 
   private checkFirstLaunch(): void {
@@ -182,6 +465,15 @@ class DialogueEditor {
   }
 
   private setupToolbar(): void {
+    this.toolbar.addAction({
+      id: 'projects',
+      icon: '📁',
+      label: 'Projects',
+      onClick: () => this.projectManager.showProjectBrowser()
+    });
+
+    this.toolbar.addSeparator();
+
     this.toolbar.addAction({
       id: 'new',
       icon: '📄',
