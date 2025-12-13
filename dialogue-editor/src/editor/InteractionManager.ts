@@ -103,16 +103,18 @@ export class InteractionManager {
     // Left mouse button
     if (e.button === 0) {
       const nodes = this.model.getNodes();
-      const hitNode = this.renderer.hitTestNode(nodes, worldPos);
-
-      // Check for port click first
-      if (hitNode) {
-        const portHit = this.renderer.getNodeRenderer().hitTestPort(hitNode, worldPos);
+      
+      // Check for port click first - check ALL nodes, not just the hit node
+      // because ports extend outside the node bounds
+      for (const node of nodes) {
+        const portHit = this.renderer.getNodeRenderer().hitTestPort(node, worldPos);
         if (portHit) {
-          this.startConnectionDrag(screenPos, worldPos, hitNode.id, portHit.type, portHit.index);
+          this.startConnectionDrag(screenPos, worldPos, node.id, portHit.type, portHit.index);
           return;
         }
       }
+      
+      const hitNode = this.renderer.hitTestNode(nodes, worldPos);
 
       // Check for node click
       if (hitNode) {
