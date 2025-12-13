@@ -53,14 +53,18 @@ export class Toolbar {
     button.id = `toolbar-${action.id}`;
     button.disabled = action.disabled || false;
     
+    // Add tooltip with shortcut
+    if (action.shortcut) {
+      button.setAttribute('data-tooltip', `${action.label} (${action.shortcut})`);
+    } else {
+      button.setAttribute('data-tooltip', action.label);
+    }
+    
     let content = '';
     if (action.icon) {
       content += `<span class="toolbar-icon">${action.icon}</span>`;
     }
     content += `<span class="toolbar-label">${action.label}</span>`;
-    if (action.shortcut) {
-      content += `<span class="toolbar-shortcut">${action.shortcut}</span>`;
-    }
     
     button.innerHTML = content;
     button.addEventListener('click', action.onClick);

@@ -431,9 +431,17 @@ export class PropertiesPanel {
   renderEmpty(): void {
     this.currentNode = null;
     this.container.innerHTML = `
-      <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
-        <div style="font-size: 32px; margin-bottom: 12px;">📝</div>
-        <div>Select a node to edit its properties</div>
+      <div class="properties-empty">
+        <div class="properties-empty-icon">🎯</div>
+        <div class="properties-empty-title">No Node Selected</div>
+        <div class="properties-empty-hint">
+          Click on a node in the canvas to edit its properties here.
+          <br><br>
+          <strong>Quick tips:</strong><br>
+          • Double-click dialogue nodes to edit text<br>
+          • Drag from ports to create connections<br>
+          • Use the palette on the left to add nodes
+        </div>
       </div>
     `;
   }

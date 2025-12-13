@@ -10,6 +10,7 @@ import { Palette } from './ui/Palette';
 import { PropertiesPanel } from './ui/PropertiesPanel';
 import { ContextMenu } from './ui/ContextMenu';
 import { StatusBar } from './ui/StatusBar';
+import { WelcomeOverlay, Template, TEMPLATES } from './ui/WelcomeOverlay';
 import { Node, NodeType, Position } from './types/graph';
 import { NodeFactory } from './core/NodeFactory';
 
@@ -23,6 +24,8 @@ class DialogueEditor {
   private contextMenu: ContextMenu;
   private statusBar: StatusBar;
   private canvas: HTMLCanvasElement;
+  private welcomeOverlay: WelcomeOverlay;
+  private isFirstLaunch: boolean = true;
 
   constructor() {
     // Get canvas element
@@ -53,6 +56,7 @@ class DialogueEditor {
     this.propertiesPanel = new PropertiesPanel('properties-panel', this.onPropertyChange.bind(this));
     this.contextMenu = new ContextMenu();
     this.statusBar = new StatusBar('status-bar');
+    this.welcomeOverlay = new WelcomeOverlay(this.onTemplateSelected.bind(this));
 
     // Setup toolbar actions
     this.setupToolbar();
@@ -67,26 +71,138 @@ class DialogueEditor {
     this.render();
     this.updateStatusBar();
 
-    // Add some demo content
-    this.createDemoContent();
+    // Check if first launch and show welcome
+    this.checkFirstLaunch();
+
+    // Add help button
+    this.addHelpButton();
+  }
+
+  private checkFirstLaunch(): void {
+    const hasVisited = localStorage.getItem('dialogue-editor-visited');
+    if (!hasVisited) {
+      this.isFirstLaunch = true;
+      this.welcomeOverlay.show();
+    } else {
+      this.isFirstLaunch = false;
+      // Show empty state hint if no nodes
+      this.updateCanvasHint();
+    }
+  }
+
+  private onTemplateSelected(template: Template): void {
+    localStorage.setItem('dialogue-editor-visited', 'true');
+    
+    // Clear existing content
+    this.model.newGraph('My Dialogue');
+    
+    // Add default characters
+    this.model.addCharacter('Player', '#4a90e2');
+    this.model.addCharacter('NPC', '#e74c3c');
+    
+    if (template.id === 'blank') {
+      // Show canvas hint for blank template
+      this.updateCanvasHint();
+      this.render();
+      return;
+    }
+    
+    // Create nodes from template
+    const createdNodes: Node[] = [];
+    for (const nodeDef of template.nodes) {
+      const node = this.model.addNode(nodeDef.type, { x: nodeDef.x, y: nodeDef.y });
+      createdNodes.push(node);
+      
+      // Add extra output ports for branch/hub nodes
+      if (nodeDef.type === 'branch' || nodeDef.type === 'hub') {
+        // Templates may need more than 2 outputs
+        const neededOutputs = template.connections.filter(c => c.from === template.nodes.indexOf(nodeDef)).length;
+        while (node.outputPorts.length < neededOutputs) {
+          NodeFactory.addOutputPort(node);
+        }
+      }
+    }
+    
+    // Create connections
+    for (const conn of template.connections) {
+      if (createdNodes[conn.from] && createdNodes[conn.to]) {
+        this.model.addConnection(
+          createdNodes[conn.from].id,
+          conn.fromPort,
+          createdNodes[conn.to].id,
+          conn.toPort
+        );
+      }
+    }
+    
+    // Fit view and render
+    this.render();
+    setTimeout(() => this.fitView(), 100);
+    
+    this.statusBar.setMessage(`Created "${template.name}" template`, 3000);
+    this.hideCanvasHint();
+  }
+
+  private addHelpButton(): void {
+    const helpBtn = document.createElement('button');
+    helpBtn.className = 'help-button';
+    helpBtn.innerHTML = '?';
+    helpBtn.title = 'Show welcome screen';
+    helpBtn.addEventListener('click', () => {
+      this.welcomeOverlay.show();
+    });
+    document.body.appendChild(helpBtn);
+  }
+
+  private updateCanvasHint(): void {
+    const nodes = this.model.getNodes();
+    const container = document.getElementById('canvas-container');
+    
+    // Remove existing hint
+    const existingHint = container?.querySelector('.canvas-hint');
+    if (existingHint) existingHint.remove();
+    
+    if (nodes.length === 0 && container) {
+      const hint = document.createElement('div');
+      hint.className = 'canvas-hint';
+      hint.innerHTML = `
+        <div class="canvas-hint-icon">💬</div>
+        <div class="canvas-hint-text">
+          <strong>Drag nodes</strong> from the left panel<br>
+          or <strong>right-click</strong> to add nodes
+        </div>
+      `;
+      container.appendChild(hint);
+    }
+  }
+
+  private hideCanvasHint(): void {
+    const hint = document.querySelector('.canvas-hint');
+    if (hint) hint.remove();
   }
 
   private setupToolbar(): void {
     this.toolbar.addAction({
       id: 'new',
+      icon: '📄',
       label: 'New',
+      shortcut: '⌘N',
       onClick: () => this.newProject()
     });
 
     this.toolbar.addAction({
       id: 'save',
+      icon: '💾',
       label: 'Save',
+      shortcut: '⌘S',
       onClick: () => this.saveProject()
     });
 
     this.toolbar.addAction({
       id: 'load',
-      label: 'Load',
+      icon: '📂',
+      label: 'Open',
+      shortcut: '⌘O',
       onClick: () => this.loadProject()
     });
 
@@ -94,7 +210,9 @@ class DialogueEditor {
 
     this.toolbar.addAction({
       id: 'undo',
+      icon: '↩️',
       label: 'Undo',
+      shortcut: '⌘Z',
       onClick: () => {
         this.model.undo();
         this.render();
@@ -103,7 +221,9 @@ class DialogueEditor {
 
     this.toolbar.addAction({
       id: 'redo',
+      icon: '↪️',
       label: 'Redo',
+      shortcut: '⌘⇧Z',
       onClick: () => {
         this.model.redo();
         this.render();
@@ -114,12 +234,14 @@ class DialogueEditor {
 
     this.toolbar.addAction({
       id: 'validate',
+      icon: '✓',
       label: 'Validate',
       onClick: () => this.validateGraph()
     });
 
     this.toolbar.addAction({
       id: 'export',
+      icon: '📤',
       label: 'Export',
       onClick: () => this.exportProject()
     });
@@ -128,13 +250,15 @@ class DialogueEditor {
 
     this.toolbar.addAction({
       id: 'fit',
-      label: 'Fit View',
+      icon: '⊡',
+      label: 'Fit',
       onClick: () => this.fitView()
     });
 
     this.toolbar.addAction({
       id: 'reset-view',
-      label: 'Reset View',
+      icon: '⟲',
+      label: 'Reset',
       onClick: () => {
         this.renderer.getViewport().reset();
         this.render();
