@@ -18,6 +18,8 @@ import { InlineEditor } from './ui/InlineEditor';
 import { FloatingToolbar } from './ui/FloatingToolbar';
 import { Node, NodeType, Position } from './types/graph';
 import { NodeFactory } from './core/NodeFactory';
+import { UnrealExporter } from './services/UnrealExporter';
+import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/BulkImporter';
 
 class DialogueEditor {
   private model: GraphModel;
@@ -328,17 +330,17 @@ class DialogueEditor {
     this.toolbar.addSeparator();
 
     this.toolbar.addAction({
-      id: 'validate',
-      icon: '✓',
-      label: 'Validate',
-      onClick: () => this.validateGraph()
+      id: 'import',
+      icon: '📥',
+      label: 'Import',
+      onClick: () => this.importDialogue()
     });
 
     this.toolbar.addAction({
       id: 'export',
       icon: '📤',
-      label: 'Export',
-      onClick: () => this.exportProject()
+      label: 'Export for Unreal',
+      onClick: () => this.exportForUnreal()
     });
 
     this.toolbar.addSeparator();
@@ -702,59 +704,118 @@ class DialogueEditor {
     }
   }
 
-  private exportProject(): void {
-    const graph = this.model.getGraph();
-    
-    // Export in Articy-compatible format
-    const exportData = {
-      formatVersion: '1.0',
-      project: {
-        name: graph.name,
-        technicalName: graph.technicalName,
-        guid: graph.id
-      },
-      globalVariables: graph.variables,
-      characters: graph.characters,
-      packages: [{
-        name: 'Main',
-        isDefaultPackage: true,
-        objects: graph.nodes.map(node => ({
-          id: node.id,
-          technicalName: node.technicalName,
-          type: this.mapNodeTypeToArticy(node.nodeType),
-          position: node.position,
-          properties: node.data,
-          inputPins: node.inputPorts,
-          outputPins: node.outputPorts
-        })),
-        connections: graph.connections
-      }]
-    };
+  // ==================== IMPORT/EXPORT ====================
 
-    const json = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+  private importDialogue(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const data = parseImportJSON(text);
+        
+        if (!data) {
+          alert('Invalid import file format. Expected BulkDialogueImport JSON.');
+          return;
+        }
+        
+        const importer = new BulkImporter(this.model);
+        
+        // Check if it's the full format or simple format
+        if ('acts' in data) {
+          const result = importer.importDialogueTree(data as BulkDialogueImport);
+          
+          if (result.success) {
+            this.render();
+            this.fitView();
+            this.statusBar.setMessage(
+              `Imported ${result.nodesCreated} nodes, ${result.connectionsCreated} connections, ${result.charactersCreated} characters`,
+              5000
+            );
+            
+            if (result.warnings.length > 0) {
+              console.warn('Import warnings:', result.warnings);
+            }
+          } else {
+            alert('Import failed:\n' + result.errors.join('\n'));
+          }
+        } else {
+          const result = importer.importSimple(data);
+          
+          if (result.success) {
+            this.render();
+            this.fitView();
+            this.statusBar.setMessage(
+              `Imported ${result.nodesCreated} nodes`,
+              3000
+            );
+          } else {
+            alert('Import failed:\n' + result.errors.join('\n'));
+          }
+        }
+      } catch (err) {
+        alert('Failed to read import file: ' + (err instanceof Error ? err.message : String(err)));
+      }
+    };
+    
+    input.click();
+  }
+
+  private exportForUnreal(): void {
+    const graph = this.model.getGraph();
+    const exporter = new UnrealExporter(graph, {
+      projectName: graph.name || 'DialogueProject',
+      includeValidation: true,
+      prettyPrint: true
+    });
+    
+    const result = exporter.exportWithValidation();
+    
+    // Show validation results
+    if (result.validation.length > 0) {
+      const errors = result.validation.filter(v => v.type === 'error');
+      const warnings = result.validation.filter(v => v.type === 'warning');
+      
+      if (errors.length > 0) {
+        const proceed = confirm(
+          `Export has ${errors.length} error(s) and ${warnings.length} warning(s):\n\n` +
+          result.validation.map(v => `[${v.type.toUpperCase()}] ${v.message}`).join('\n') +
+          '\n\nDo you want to export anyway?'
+        );
+        if (!proceed) return;
+      } else if (warnings.length > 0) {
+        console.warn('Export warnings:', warnings);
+      }
+    }
+    
+    if (!result.json) {
+      alert('Export failed - no data generated');
+      return;
+    }
+    
+    // Download the JSON file
+    const blob = new Blob([result.json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${graph.technicalName}.articyue.json`;
+    a.download = `${graph.technicalName || 'dialogue'}.articy.json`;
     a.click();
     URL.revokeObjectURL(url);
 
-    this.statusBar.setMessage('Exported for Unreal', 2000);
+    this.statusBar.setMessage(
+      `Exported for Unreal: ${result.stats.nodeCount} nodes, ${result.stats.wordCount} words`,
+      3000
+    );
   }
 
-  private mapNodeTypeToArticy(nodeType: NodeType): string {
-    const mapping: Record<NodeType, string> = {
-      dialogue: 'Dialogue',
-      dialogueFragment: 'DialogueFragment',
-      flowFragment: 'FlowFragment',
-      branch: 'Hub',
-      condition: 'Condition',
-      instruction: 'Instruction',
-      hub: 'Hub',
-      jump: 'Jump'
-    };
-    return mapping[nodeType] || 'FlowFragment';
+  private exportProject(): void {
+    // Legacy export - redirect to new Unreal export
+    this.exportForUnreal();
   }
 
   private fitView(): void {
