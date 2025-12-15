@@ -3,8 +3,6 @@
  * Uses design tokens for consistent styling
  */
 
-@import './tokens.css';
-
 /* Reset */
 *, *::before, *::after {
   margin: 0;

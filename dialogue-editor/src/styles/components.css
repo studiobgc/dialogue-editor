@@ -382,7 +382,7 @@
 
 .floating-toolbar {
   position: fixed;
-  display: flex;
+  display: none;
   gap: var(--space-1);
   padding: var(--space-1);
   background: var(--surface-overlay);
@@ -390,6 +390,15 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   z-index: var(--z-popover);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.floating-toolbar.visible {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .floating-toolbar-btn {
@@ -414,6 +423,27 @@
 .floating-toolbar-btn.destructive:hover {
   background: var(--status-error-subtle);
   color: var(--status-error);
+}
+
+.floating-toolbar-btn.primary {
+  background: var(--interactive-default);
+  color: white;
+}
+
+.floating-toolbar-btn.primary:hover {
+  background: var(--interactive-hover);
+}
+
+.floating-toolbar-btn.danger:hover {
+  background: var(--status-error-subtle);
+  color: var(--status-error);
+}
+
+.floating-toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  margin: 0 var(--space-1);
 }
 
 /* ========================================
