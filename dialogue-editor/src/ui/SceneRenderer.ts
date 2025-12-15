@@ -1,12 +1,19 @@
 /**
- * SceneRenderer - Canvas-based procedural illustration system
+ * SceneRenderer - Outsider Art-Inspired Illustration System
  * 
- * Design principles:
- * - Utilitarian, not fancy
- * - Simple geometric shapes (circles, rectangles, lines)
- * - Accessible colors with good contrast
- * - Fast procedural generation
- * - No complex SVG paths or hand-drawn effects
+ * Inspired by 1960s outsider artists:
+ * - Henry Darger (dense, layered, obsessive)
+ * - Adolf Wölfli (pattern-heavy, horror vacui)
+ * - Martín Ramírez (repetitive lines, tunnels)
+ * - Bill Traylor (simple but powerful shapes)
+ * 
+ * Techniques:
+ * - Wobbly, shaking lines (nothing is straight)
+ * - Repetitive mark-making (hatching, spirals, dots)
+ * - Asymmetry (intentionally off-balance)
+ * - Dense layering (multiple passes)
+ * - Raw, visible strokes
+ * - Horror vacui (fill the space)
  */
 
 export interface SceneConfig {
@@ -16,29 +23,43 @@ export interface SceneConfig {
   objects?: string[];
 }
 
-// Simple, accessible color palette
-const COLORS = {
-  // Backgrounds
-  floor: '#E8E4DC',
-  wall: '#F5F2EC',
-  wallShadow: '#DDD8D0',
+// Outsider art palette - raw, not refined
+const PALETTE = {
+  // Papers and grounds (yellowed, aged)
+  paper: '#F2EBD9',
+  paperDark: '#E5DCC8',
+  paperWarm: '#F0E4D0',
   
-  // Characters (high contrast, accessible)
-  mara: '#4A6670',
-  eli: '#5C7A5C',
-  dana: '#8B6B4A',
-  player: '#6B6B8B',
+  // Inks (slightly faded, imperfect)
+  ink: '#2A2622',
+  inkLight: '#5A5650',
+  inkFaded: '#8A8680',
   
-  // Objects
-  furniture: '#C4B8A8',
-  furnitureDark: '#9A8E7E',
-  accent: '#B85C38',
+  // Raw colors (like cheap colored pencils)
+  red: '#C45D4A',
+  blue: '#4A6A8A',
+  green: '#5A7A5A',
+  yellow: '#D4B84A',
+  orange: '#C47A4A',
+  purple: '#6A5A7A',
   
-  // UI
-  text: '#3A3A3A',
-  textLight: '#6A6A6A',
-  border: '#AAAAAA',
+  // Character colors (muted, earthy)
+  mara: '#8A6A5A',
+  eli: '#5A6A5A',
+  dana: '#7A6A4A',
+  player: '#4A4A5A',
 };
+
+// Seed for deterministic randomness per scene
+let seed = 1;
+function seededRandom(): number {
+  seed = (seed * 16807) % 2147483647;
+  return (seed - 1) / 2147483646;
+}
+
+function resetSeed(s: number): void {
+  seed = s;
+}
 
 export class SceneRenderer {
   private canvas: HTMLCanvasElement;
@@ -62,234 +83,311 @@ export class SceneRenderer {
   }
 
   render(config: SceneConfig): HTMLCanvasElement {
-    this.clear();
-    this.drawRoom(config.location, config.mood);
-    this.drawObjects(config.objects || [], config.location);
+    // Seed based on location for consistency
+    resetSeed(this.hashString(config.location));
+    
+    this.clear(config.mood);
+    this.drawBackground(config.location);
+    this.drawRoom(config.location);
+    this.drawPatternLayer(config.location, config.mood);
     this.drawCharacters(config.characters, config.location);
-    this.drawLabel(config.location);
+    this.drawObjects(config.objects || [], config.location);
+    this.drawBorderMarks();
+    
     return this.canvas;
   }
 
-  private clear(): void {
-    this.ctx.fillStyle = COLORS.wall;
-    this.ctx.fillRect(0, 0, this.width, this.height);
+  private hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return Math.abs(hash) || 1;
   }
 
-  private drawRoom(location: string, mood: string): void {
+  private clear(mood: string): void {
     const ctx = this.ctx;
     
-    // Simple isometric floor
-    ctx.fillStyle = COLORS.floor;
-    ctx.beginPath();
-    ctx.moveTo(50, 200);
-    ctx.lineTo(200, 130);
-    ctx.lineTo(350, 200);
-    ctx.lineTo(200, 270);
-    ctx.closePath();
-    ctx.fill();
+    // Base paper color varies by mood
+    let baseColor = PALETTE.paper;
+    if (mood === 'tense') baseColor = '#F0E8E0';
+    else if (mood === 'warm') baseColor = '#F4ECD8';
+    else if (mood === 'mysterious') baseColor = '#E8E8F0';
     
-    // Back walls
-    ctx.fillStyle = COLORS.wall;
-    ctx.beginPath();
-    ctx.moveTo(50, 200);
-    ctx.lineTo(50, 80);
-    ctx.lineTo(200, 10);
-    ctx.lineTo(200, 130);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, this.width, this.height);
     
-    ctx.fillStyle = COLORS.wallShadow;
-    ctx.beginPath();
-    ctx.moveTo(200, 10);
-    ctx.lineTo(200, 130);
-    ctx.lineTo(350, 200);
-    ctx.lineTo(350, 80);
-    ctx.closePath();
-    ctx.fill();
+    // Add paper texture with tiny dots
+    ctx.fillStyle = 'rgba(0,0,0,0.02)';
+    for (let i = 0; i < 200; i++) {
+      const x = seededRandom() * this.width;
+      const y = seededRandom() * this.height;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  private drawBackground(location: string): void {
+    const ctx = this.ctx;
     
-    // Room-specific details
-    if (location.includes('KITCHEN')) {
-      this.drawKitchenDetails();
-    } else if (location.includes('DINING')) {
-      this.drawDiningDetails();
+    // Obsessive background pattern based on location
+    ctx.strokeStyle = PALETTE.inkFaded;
+    ctx.lineWidth = 0.5;
+    
+    if (location.includes('RADIO')) {
+      // Concentric circles (radio waves) - Ramírez style
+      for (let r = 20; r < 400; r += 15) {
+        this.wobbleCircle(200, 150, r, 0.3);
+      }
     } else if (location.includes('HALLWAY')) {
-      this.drawHallwayDetails();
-    } else if (location.includes('RADIO')) {
-      this.drawRadioRoomDetails();
-    } else if (location.includes('BATHROOM')) {
-      this.drawBathroomDetails();
+      // Converging lines (tunnel) - Ramírez style
+      for (let i = 0; i < 30; i++) {
+        const x = i * 15;
+        this.wobbleLine(x, 0, 200, 150);
+        this.wobbleLine(400 - x, 0, 200, 150);
+        this.wobbleLine(x, 300, 200, 150);
+        this.wobbleLine(400 - x, 300, 200, 150);
+      }
+    } else if (location.includes('KITCHEN')) {
+      // Grid pattern (tiles) - slightly off
+      for (let x = 0; x < this.width; x += 25) {
+        this.wobbleLine(x + seededRandom() * 5, 0, x + seededRandom() * 5, 300);
+      }
+      for (let y = 0; y < this.height; y += 25) {
+        this.wobbleLine(0, y + seededRandom() * 5, 400, y + seededRandom() * 5);
+      }
+    } else if (location.includes('DINING')) {
+      // Radiating lines from center (like a table)
+      for (let a = 0; a < Math.PI * 2; a += 0.15) {
+        const x = 200 + Math.cos(a) * 200;
+        const y = 150 + Math.sin(a) * 200;
+        this.wobbleLine(200, 150, x, y);
+      }
     } else {
-      this.drawLivingRoomDetails();
+      // Default: horizontal hatching
+      for (let y = 10; y < this.height; y += 8) {
+        this.wobbleLine(0, y, this.width, y + seededRandom() * 4 - 2);
+      }
     }
+  }
+
+  private drawRoom(location: string): void {
+    const ctx = this.ctx;
     
-    // Mood overlay
+    // Draw room with wobbly lines, not filled shapes
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    
+    // Floor - wonky quadrilateral
+    const floorPoints = [
+      { x: 40 + seededRandom() * 10, y: 200 + seededRandom() * 10 },
+      { x: 200 + seededRandom() * 10, y: 120 + seededRandom() * 10 },
+      { x: 360 + seededRandom() * 10, y: 200 + seededRandom() * 10 },
+      { x: 200 + seededRandom() * 10, y: 280 + seededRandom() * 10 },
+    ];
+    
+    // Fill floor with hatching
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(floorPoints[0].x, floorPoints[0].y);
+    for (const p of floorPoints.slice(1)) {
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.clip();
+    
+    ctx.strokeStyle = PALETTE.inkLight;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 50; i++) {
+      const y = 100 + i * 5;
+      this.wobbleLine(0, y, 400, y + seededRandom() * 10);
+    }
+    ctx.restore();
+    
+    // Floor outline
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    this.wobblePolygon(floorPoints);
+    
+    // Back walls - just lines, not filled
+    // Left wall
+    this.wobbleLine(floorPoints[0].x, floorPoints[0].y, 50, 60);
+    this.wobbleLine(50, 60, 200, 10);
+    this.wobbleLine(200, 10, floorPoints[1].x, floorPoints[1].y);
+    
+    // Right wall
+    this.wobbleLine(200, 10, 350, 60);
+    this.wobbleLine(350, 60, floorPoints[2].x, floorPoints[2].y);
+    
+    // Add some cross-hatching on walls
+    ctx.strokeStyle = PALETTE.inkFaded;
+    ctx.lineWidth = 0.3;
+    for (let i = 0; i < 20; i++) {
+      const x = 60 + seededRandom() * 120;
+      const y1 = 70 + seededRandom() * 100;
+      const y2 = y1 + 20 + seededRandom() * 30;
+      this.wobbleLine(x, y1, x + seededRandom() * 20 - 10, y2);
+    }
+  }
+
+  private drawPatternLayer(location: string, mood: string): void {
+    const ctx = this.ctx;
+    
+    // Add obsessive decorative marks based on mood
     if (mood === 'tense') {
-      ctx.fillStyle = 'rgba(180, 80, 80, 0.03)';
-      ctx.fillRect(0, 0, this.width, this.height);
-    } else if (mood === 'warm') {
-      ctx.fillStyle = 'rgba(200, 150, 80, 0.03)';
-      ctx.fillRect(0, 0, this.width, this.height);
+      // Anxious scribbles
+      ctx.strokeStyle = PALETTE.red;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 15; i++) {
+        const x = seededRandom() * this.width;
+        const y = seededRandom() * this.height;
+        this.scribble(x, y, 20 + seededRandom() * 30);
+      }
     } else if (mood === 'mysterious') {
-      ctx.fillStyle = 'rgba(80, 80, 120, 0.03)';
-      ctx.fillRect(0, 0, this.width, this.height);
+      // Spiral marks
+      ctx.strokeStyle = PALETTE.purple;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 8; i++) {
+        const x = seededRandom() * this.width;
+        const y = seededRandom() * this.height;
+        this.spiral(x, y, 10 + seededRandom() * 20);
+      }
+    } else if (mood === 'warm') {
+      // Little sun/star marks
+      ctx.strokeStyle = PALETTE.orange;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 10; i++) {
+        const x = seededRandom() * this.width;
+        const y = seededRandom() * this.height;
+        this.star(x, y, 5 + seededRandom() * 10);
+      }
+    }
+    
+    // Location-specific marks
+    if (location.includes('RADIO')) {
+      // Small antenna symbols scattered
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 12; i++) {
+        const x = 50 + seededRandom() * 140;
+        const y = 50 + seededRandom() * 100;
+        this.antenna(x, y, 8 + seededRandom() * 8);
+      }
+    } else if (location.includes('DINING')) {
+      // Plate circles
+      ctx.strokeStyle = PALETTE.inkLight;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const x = 120 + seededRandom() * 160;
+        const y = 140 + seededRandom() * 80;
+        this.wobbleCircle(x, y, 12 + seededRandom() * 8, 1);
+        this.wobbleCircle(x, y, 8 + seededRandom() * 4, 0.5);
+      }
     }
   }
 
-  private drawLivingRoomDetails(): void {
+  private drawCharacters(characters: string[], location: string): void {
     const ctx = this.ctx;
+    const positions = this.getPositions(characters.length, location);
     
-    // Couch (simple rectangle)
-    ctx.fillStyle = COLORS.furniture;
-    ctx.fillRect(100, 180, 80, 30);
-    ctx.fillStyle = COLORS.furnitureDark;
-    ctx.fillRect(100, 175, 80, 8);
-    
-    // Window on back wall
-    ctx.fillStyle = '#D8E8F0';
-    ctx.fillRect(80, 100, 50, 40);
-    ctx.strokeStyle = COLORS.border;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(80, 100, 50, 40);
-    ctx.beginPath();
-    ctx.moveTo(105, 100);
-    ctx.lineTo(105, 140);
-    ctx.stroke();
+    characters.forEach((char, i) => {
+      const pos = positions[i];
+      const color = this.getCharacterColor(char);
+      const isPlayer = char.includes('player') || char.includes('char_p');
+      
+      // Characters are primitive figures - Traylor style
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      
+      if (isPlayer) {
+        // Player is just an outline, observer
+        this.drawFigureOutline(pos.x, pos.y, 40);
+      } else {
+        // NPCs are more solid, with character
+        this.drawFigure(pos.x, pos.y, 40, char);
+      }
+    });
   }
 
-  private drawKitchenDetails(): void {
+  private drawFigure(x: number, y: number, size: number, char: string): void {
     const ctx = this.ctx;
     
-    // Counter
-    ctx.fillStyle = COLORS.furniture;
+    // Body - wonky trapezoid
     ctx.beginPath();
-    ctx.moveTo(70, 180);
-    ctx.lineTo(70, 150);
-    ctx.lineTo(150, 115);
-    ctx.lineTo(150, 145);
+    ctx.moveTo(x - size * 0.3 + seededRandom() * 4, y);
+    ctx.lineTo(x - size * 0.2 + seededRandom() * 4, y - size * 0.5);
+    ctx.lineTo(x + size * 0.2 + seededRandom() * 4, y - size * 0.5);
+    ctx.lineTo(x + size * 0.3 + seededRandom() * 4, y);
     ctx.closePath();
     ctx.fill();
     
-    // Stove
-    ctx.fillStyle = COLORS.furnitureDark;
-    ctx.fillRect(250, 160, 50, 25);
-    
-    // Burners
-    ctx.fillStyle = '#3A3A3A';
-    ctx.beginPath();
-    ctx.arc(265, 168, 6, 0, Math.PI * 2);
-    ctx.arc(285, 172, 6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  private drawDiningDetails(): void {
-    const ctx = this.ctx;
-    
-    // Table (simple diamond)
-    ctx.fillStyle = COLORS.furniture;
-    ctx.beginPath();
-    ctx.moveTo(200, 160);
-    ctx.lineTo(250, 185);
-    ctx.lineTo(200, 210);
-    ctx.lineTo(150, 185);
-    ctx.closePath();
+    // Head - wobbly circle
+    const headY = y - size * 0.7;
+    this.wobbleCircle(x + seededRandom() * 4, headY, size * 0.2, 2);
     ctx.fill();
     
-    // Table legs
-    ctx.strokeStyle = COLORS.furnitureDark;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(165, 185);
-    ctx.lineTo(165, 200);
-    ctx.moveTo(235, 185);
-    ctx.lineTo(235, 200);
-    ctx.stroke();
-    
-    // Place settings (simple circles)
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeStyle = COLORS.border;
-    ctx.lineWidth = 1;
-    for (const pos of [[175, 175], [225, 175], [175, 195], [225, 195]]) {
+    // Character-specific marks
+    if (char.includes('mara') || char.includes('host')) {
+      // Spoon - simple line with blob
+      ctx.lineWidth = 2;
+      this.wobbleLine(x + 15, y - 20, x + 30, y - 5);
       ctx.beginPath();
-      ctx.arc(pos[0], pos[1], 8, 0, Math.PI * 2);
+      ctx.arc(x + 32, y - 3, 5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
-    }
-  }
-
-  private drawHallwayDetails(): void {
-    const ctx = this.ctx;
-    
-    // Narrower room feel - add side walls extending
-    ctx.fillStyle = COLORS.wallShadow;
-    ctx.fillRect(60, 100, 20, 120);
-    ctx.fillRect(320, 100, 20, 120);
-    
-    // Door 1
-    ctx.fillStyle = COLORS.furniture;
-    ctx.fillRect(100, 110, 40, 70);
-    ctx.fillStyle = COLORS.furnitureDark;
-    ctx.beginPath();
-    ctx.arc(130, 145, 3, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Door 2 (mysterious)
-    ctx.fillStyle = '#8A8070';
-    ctx.fillRect(260, 110, 40, 70);
-    // Light under door
-    ctx.fillStyle = 'rgba(255, 240, 200, 0.4)';
-    ctx.fillRect(265, 177, 30, 3);
-  }
-
-  private drawRadioRoomDetails(): void {
-    const ctx = this.ctx;
-    
-    // Shelves
-    ctx.strokeStyle = COLORS.furnitureDark;
-    ctx.lineWidth = 3;
-    for (let y = 90; y <= 150; y += 30) {
+    } else if (char.includes('eli') || char.includes('partner')) {
+      // Glasses - two circles on head
+      ctx.lineWidth = 1;
+      this.wobbleCircle(x - 5, headY, 4, 1);
+      this.wobbleCircle(x + 5, headY, 4, 1);
+    } else if (char.includes('dana') || char.includes('guest')) {
+      // Wine glass - triangle + line
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(70, y);
-      ctx.lineTo(170, y - 30);
+      ctx.moveTo(x + 18, y - 25);
+      ctx.lineTo(x + 12, y - 15);
+      ctx.lineTo(x + 24, y - 15);
+      ctx.closePath();
+      ctx.stroke();
+      this.wobbleLine(x + 18, y - 15, x + 18, y - 8);
+    }
+    
+    // Add texture - little marks inside figure
+    ctx.strokeStyle = PALETTE.paper;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) {
+      const mx = x - 8 + seededRandom() * 16;
+      const my = y - 10 - seededRandom() * 20;
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx + seededRandom() * 6 - 3, my + seededRandom() * 6 - 3);
       ctx.stroke();
     }
-    
-    // Radios (simple rectangles)
-    ctx.fillStyle = COLORS.furnitureDark;
-    for (let i = 0; i < 9; i++) {
-      const x = 80 + (i % 3) * 25;
-      const y = 65 + Math.floor(i / 3) * 28;
-      ctx.fillRect(x, y, 18, 12);
-    }
-    
-    // One radio glowing
-    ctx.fillStyle = 'rgba(255, 220, 150, 0.5)';
-    ctx.beginPath();
-    ctx.arc(139, 71, 10, 0, Math.PI * 2);
-    ctx.fill();
   }
 
-  private drawBathroomDetails(): void {
+  private drawFigureOutline(x: number, y: number, size: number): void {
     const ctx = this.ctx;
-    
-    // Mirror
-    ctx.fillStyle = '#E8F0F0';
-    ctx.fillRect(160, 60, 80, 60);
-    ctx.strokeStyle = COLORS.border;
     ctx.lineWidth = 2;
-    ctx.strokeRect(160, 60, 80, 60);
     
-    // Sink
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(175, 150, 50, 20);
-    ctx.strokeStyle = COLORS.border;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(175, 150, 50, 20);
+    // Body outline only - dashed/broken
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.3, y);
+    ctx.lineTo(x - size * 0.2, y - size * 0.5);
+    ctx.lineTo(x + size * 0.2, y - size * 0.5);
+    ctx.lineTo(x + size * 0.3, y);
+    ctx.closePath();
+    ctx.stroke();
     
-    // Three soap bottles
-    ctx.fillStyle = '#D8C8E8';
-    for (let i = 0; i < 3; i++) {
-      ctx.fillRect(185 + i * 15, 135, 8, 14);
-    }
+    // Head outline
+    this.wobbleCircle(x, y - size * 0.7, size * 0.2, 2);
+    ctx.setLineDash([]);
+    
+    // Question mark inside? Or just empty
+    ctx.fillStyle = PALETTE.inkFaded;
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('?', x, y - size * 0.2);
   }
 
   private drawObjects(objects: string[], location: string): void {
@@ -297,171 +395,239 @@ export class SceneRenderer {
     
     for (const obj of objects) {
       if (obj === 'colander') {
-        // Colander
-        ctx.strokeStyle = COLORS.furnitureDark;
+        // Colander - bowl with dots
+        const cx = 280 + seededRandom() * 20;
+        const cy = 180;
+        ctx.strokeStyle = PALETTE.ink;
         ctx.lineWidth = 2;
+        
+        // Bowl shape
         ctx.beginPath();
-        ctx.ellipse(280, 170, 15, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, 20, 10, 0, 0, Math.PI);
         ctx.stroke();
-        // Holes
-        ctx.fillStyle = COLORS.furnitureDark;
-        for (const p of [[-5, 2], [5, 2], [0, 5]]) {
+        this.wobbleLine(cx - 20, cy, cx - 20, cy - 8);
+        this.wobbleLine(cx + 20, cy, cx + 20, cy - 8);
+        
+        // Holes - obsessive dots
+        ctx.fillStyle = PALETTE.ink;
+        for (let i = 0; i < 15; i++) {
+          const hx = cx - 15 + seededRandom() * 30;
+          const hy = cy - 5 + seededRandom() * 10;
           ctx.beginPath();
-          ctx.arc(280 + p[0], 170 + p[1], 2, 0, Math.PI * 2);
+          ctx.arc(hx, hy, 1.5, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (obj === 'wine') {
-        // Wine bottle
-        ctx.fillStyle = '#4A3530';
-        ctx.fillRect(220, 155, 8, 20);
-        ctx.fillRect(222, 148, 4, 8);
+        // Wine bottle - simple shape with hatching
+        const bx = 150 + seededRandom() * 20;
+        const by = 170;
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.5;
         
-        // Wine glass
-        ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 1;
+        // Bottle body
         ctx.beginPath();
-        ctx.ellipse(240, 165, 6, 3, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(240, 168);
-        ctx.lineTo(240, 178);
-        ctx.stroke();
-      } else if (obj === 'napkin_swan') {
-        // Simple folded napkin shape
-        ctx.fillStyle = '#FAFAFA';
-        ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(195, 175);
-        ctx.lineTo(200, 165);
-        ctx.lineTo(205, 175);
+        ctx.moveTo(bx - 8, by);
+        ctx.lineTo(bx - 8, by - 25);
+        ctx.lineTo(bx - 3, by - 30);
+        ctx.lineTo(bx - 3, by - 40);
+        ctx.lineTo(bx + 3, by - 40);
+        ctx.lineTo(bx + 3, by - 30);
+        ctx.lineTo(bx + 8, by - 25);
+        ctx.lineTo(bx + 8, by);
         ctx.closePath();
-        ctx.fill();
         ctx.stroke();
+        
+        // Fill with hatching
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 8; i++) {
+          const ly = by - 5 - i * 3;
+          this.wobbleLine(bx - 6, ly, bx + 6, ly);
+        }
+      } else if (obj === 'napkin_swan') {
+        // Abstract bird shape
+        const sx = 200 + seededRandom() * 40;
+        const sy = 160;
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1;
+        
+        // Bird body - triangle
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx - 10, sy + 8);
+        ctx.lineTo(sx + 10, sy + 8);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Neck - curved line up
+        this.wobbleLine(sx, sy, sx + 5, sy - 15);
+        // Head - dot
+        ctx.beginPath();
+        ctx.arc(sx + 5, sy - 17, 3, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
 
-  private drawCharacters(characters: string[], location: string): void {
+  private drawBorderMarks(): void {
     const ctx = this.ctx;
     
-    // Position characters based on count and location
-    const positions = this.getCharacterPositions(characters.length, location);
+    // Obsessive border marks - like the artist couldn't stop
+    ctx.strokeStyle = PALETTE.inkFaded;
+    ctx.lineWidth = 0.5;
     
-    characters.forEach((char, i) => {
-      const pos = positions[i] || { x: 200, y: 200 };
-      const color = this.getCharacterColor(char);
-      
-      // Simple character representation: circle head + rounded body
-      ctx.fillStyle = color;
-      
-      // Body (rounded rectangle approximation)
-      ctx.beginPath();
-      ctx.ellipse(pos.x, pos.y, 12, 16, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Head
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y - 22, 10, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Character-specific details
-      if (char.includes('mara') || char.includes('host')) {
-        // Wooden spoon
-        ctx.strokeStyle = '#8B7355';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(pos.x + 12, pos.y - 8);
-        ctx.lineTo(pos.x + 22, pos.y + 2);
-        ctx.stroke();
-      } else if (char.includes('eli') || char.includes('partner')) {
-        // Glasses
-        ctx.strokeStyle = '#3A3A3A';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(pos.x - 4, pos.y - 22, 4, 0, Math.PI * 2);
-        ctx.arc(pos.x + 4, pos.y - 22, 4, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (char.includes('dana') || char.includes('guest')) {
-        // Wine glass
-        ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(pos.x + 15, pos.y - 5, 4, 2, 0, 0, Math.PI * 2);
-        ctx.moveTo(pos.x + 15, pos.y - 3);
-        ctx.lineTo(pos.x + 15, pos.y + 3);
-        ctx.stroke();
-      } else if (char.includes('player') || char.includes('you')) {
-        // Player is just an outline
-        ctx.fillStyle = COLORS.wall;
-        ctx.beginPath();
-        ctx.ellipse(pos.x, pos.y, 11, 15, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y - 22, 9, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(pos.x, pos.y, 12, 16, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y - 22, 10, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    });
+    // Top edge marks
+    for (let x = 10; x < this.width - 10; x += 8 + seededRandom() * 8) {
+      const len = 3 + seededRandom() * 6;
+      this.wobbleLine(x, 2, x + seededRandom() * 4 - 2, 2 + len);
+    }
+    
+    // Bottom edge marks
+    for (let x = 10; x < this.width - 10; x += 8 + seededRandom() * 8) {
+      const len = 3 + seededRandom() * 6;
+      this.wobbleLine(x, this.height - 2, x + seededRandom() * 4 - 2, this.height - 2 - len);
+    }
+    
+    // Side marks (sparser)
+    for (let y = 20; y < this.height - 20; y += 15 + seededRandom() * 15) {
+      this.wobbleLine(2, y, 2 + 3 + seededRandom() * 5, y + seededRandom() * 4 - 2);
+      this.wobbleLine(this.width - 2, y, this.width - 2 - 3 - seededRandom() * 5, y + seededRandom() * 4 - 2);
+    }
   }
 
-  private getCharacterPositions(count: number, location: string): Array<{x: number, y: number}> {
-    // Different layouts based on location and count
-    if (location.includes('DINING')) {
-      return [
-        { x: 140, y: 175 },  // Left of table
-        { x: 260, y: 175 },  // Right of table
-        { x: 200, y: 145 },  // Top of table
-        { x: 200, y: 220 },  // Bottom of table
-      ].slice(0, count);
-    }
+  // === Drawing primitives with wobble ===
+
+  private wobbleLine(x1: number, y1: number, x2: number, y2: number): void {
+    const ctx = this.ctx;
+    const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    const steps = Math.max(2, Math.floor(dist / 10));
     
-    if (location.includes('KITCHEN')) {
-      return [
-        { x: 120, y: 190 },
-        { x: 280, y: 190 },
-        { x: 200, y: 220 },
-      ].slice(0, count);
-    }
+    ctx.beginPath();
+    ctx.moveTo(x1 + seededRandom() * 2 - 1, y1 + seededRandom() * 2 - 1);
     
-    if (location.includes('HALLWAY')) {
-      return [
-        { x: 200, y: 220 },
-      ];
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const x = x1 + (x2 - x1) * t + seededRandom() * 3 - 1.5;
+      const y = y1 + (y2 - y1) * t + seededRandom() * 3 - 1.5;
+      ctx.lineTo(x, y);
     }
+    ctx.stroke();
+  }
+
+  private wobbleCircle(cx: number, cy: number, r: number, lineWidth: number): void {
+    const ctx = this.ctx;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
     
-    // Default: spread across room
-    const spacing = 280 / (count + 1);
-    return Array.from({ length: count }, (_, i) => ({
-      x: 60 + spacing * (i + 1),
-      y: 200 + (i % 2) * 15,
-    }));
+    const steps = Math.max(12, Math.floor(r));
+    for (let i = 0; i <= steps; i++) {
+      const angle = (i / steps) * Math.PI * 2;
+      const wobbleR = r + seededRandom() * 3 - 1.5;
+      const x = cx + Math.cos(angle) * wobbleR;
+      const y = cy + Math.sin(angle) * wobbleR;
+      
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  private wobblePolygon(points: Array<{x: number, y: number}>): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    
+    points.forEach((p, i) => {
+      const next = points[(i + 1) % points.length];
+      const dist = Math.sqrt((next.x - p.x) ** 2 + (next.y - p.y) ** 2);
+      const steps = Math.max(2, Math.floor(dist / 15));
+      
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      
+      for (let j = 1; j <= steps; j++) {
+        const t = j / steps;
+        const x = p.x + (next.x - p.x) * t + seededRandom() * 3 - 1.5;
+        const y = p.y + (next.y - p.y) * t + seededRandom() * 3 - 1.5;
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  private scribble(x: number, y: number, size: number): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    
+    let cx = x, cy = y;
+    for (let i = 0; i < 20; i++) {
+      cx += seededRandom() * size - size / 2;
+      cy += seededRandom() * size - size / 2;
+      cx = Math.max(x - size, Math.min(x + size, cx));
+      cy = Math.max(y - size, Math.min(y + size, cy));
+      ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+  }
+
+  private spiral(x: number, y: number, size: number): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    
+    for (let i = 0; i < 50; i++) {
+      const angle = i * 0.3;
+      const r = i * size / 50;
+      const px = x + Math.cos(angle) * r + seededRandom() * 2 - 1;
+      const py = y + Math.sin(angle) * r + seededRandom() * 2 - 1;
+      
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  private star(x: number, y: number, size: number): void {
+    const ctx = this.ctx;
+    const points = 5 + Math.floor(seededRandom() * 4);
+    
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * Math.PI * 2 - Math.PI / 2;
+      const px = x + Math.cos(angle) * size;
+      const py = y + Math.sin(angle) * size;
+      this.wobbleLine(x, y, px, py);
+    }
+  }
+
+  private antenna(x: number, y: number, size: number): void {
+    const ctx = this.ctx;
+    // Vertical line
+    this.wobbleLine(x, y, x, y - size);
+    // Horizontal bar at top
+    this.wobbleLine(x - size * 0.4, y - size, x + size * 0.4, y - size);
+    // Diagonal lines
+    this.wobbleLine(x - size * 0.3, y - size * 0.7, x, y - size);
+    this.wobbleLine(x + size * 0.3, y - size * 0.7, x, y - size);
+  }
+
+  private getPositions(count: number, location: string): Array<{x: number, y: number}> {
+    // Intentionally asymmetric positioning
+    const basePositions = [
+      { x: 120 + seededRandom() * 30, y: 220 + seededRandom() * 20 },
+      { x: 280 + seededRandom() * 30, y: 210 + seededRandom() * 20 },
+      { x: 180 + seededRandom() * 30, y: 240 + seededRandom() * 20 },
+      { x: 240 + seededRandom() * 30, y: 250 + seededRandom() * 20 },
+    ];
+    
+    return basePositions.slice(0, count);
   }
 
   private getCharacterColor(char: string): string {
     const c = char.toLowerCase();
-    if (c.includes('mara') || c.includes('host')) return COLORS.mara;
-    if (c.includes('eli') || c.includes('partner')) return COLORS.eli;
-    if (c.includes('dana') || c.includes('guest')) return COLORS.dana;
-    return COLORS.player;
-  }
-
-  private drawLabel(location: string): void {
-    const ctx = this.ctx;
-    
-    // Clean location label in top-left
-    ctx.font = '10px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = COLORS.textLight;
-    ctx.textAlign = 'left';
-    ctx.fillText(location.toUpperCase(), 12, 20);
+    if (c.includes('mara') || c.includes('host')) return PALETTE.mara;
+    if (c.includes('eli') || c.includes('partner')) return PALETTE.eli;
+    if (c.includes('dana') || c.includes('guest')) return PALETTE.dana;
+    return PALETTE.player;
   }
 
   // Static method to get scene config from dialogue text
@@ -496,26 +662,17 @@ export class SceneRenderer {
       mood = 'mysterious';
     }
     
-    // Determine characters present (simplified)
+    // Characters
     const characters: string[] = [];
     if (speakerId) characters.push(speakerId);
     if (!text.startsWith('[')) {
-      // Dialogue scene - add other characters
-      if (!characters.includes('char_host') && !text.includes('mara exits')) {
-        characters.push('char_host');
-      }
-      if (!characters.includes('char_partner')) {
-        characters.push('char_partner');
-      }
-      if (!characters.includes('char_guest1')) {
-        characters.push('char_guest1');
-      }
+      if (!characters.includes('char_host')) characters.push('char_host');
+      if (!characters.includes('char_partner')) characters.push('char_partner');
+      if (!characters.includes('char_guest1')) characters.push('char_guest1');
     }
-    if (!characters.includes('char_p')) {
-      characters.push('char_p');
-    }
+    if (!characters.includes('char_p')) characters.push('char_p');
     
-    // Determine objects
+    // Objects
     const objects: string[] = [];
     if (text.includes('colander')) objects.push('colander');
     if (text.includes('wine') || text.includes('sancerre') || text.includes('grüner')) objects.push('wine');
