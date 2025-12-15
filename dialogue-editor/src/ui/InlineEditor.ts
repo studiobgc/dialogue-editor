@@ -22,6 +22,7 @@ export class InlineEditor {
   private characters: Character[] = [];
   private callbacks: InlineEditorCallbacks;
   private textarea: HTMLTextAreaElement | null = null;
+  private isProcessingAction = false; // Prevent rapid-fire actions
 
   constructor(callbacks: InlineEditorCallbacks) {
     this.callbacks = callbacks;
@@ -38,6 +39,10 @@ export class InlineEditor {
       return; // Only for dialogue nodes
     }
 
+    // CRITICAL: Always hide existing editor first to prevent duplicates
+    this.hide();
+
+    this.isProcessingAction = false; // Reset for new editor
     this.currentNode = node;
     this.render(screenPosition, canvasRect);
 
@@ -188,8 +193,14 @@ export class InlineEditor {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      this.callbacks.onCreateNext(this.currentNode.id);
+      
+      // Prevent rapid-fire duplicate actions
+      if (this.isProcessingAction) return;
+      this.isProcessingAction = true;
+      
+      const nodeId = this.currentNode.id;
       this.hide();
+      this.callbacks.onCreateNext(nodeId);
       return;
     }
 
@@ -197,8 +208,14 @@ export class InlineEditor {
     if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      this.callbacks.onCreateBranch(this.currentNode.id);
+      
+      // Prevent rapid-fire duplicate actions
+      if (this.isProcessingAction) return;
+      this.isProcessingAction = true;
+      
+      const nodeId = this.currentNode.id;
       this.hide();
+      this.callbacks.onCreateBranch(nodeId);
       return;
     }
 
