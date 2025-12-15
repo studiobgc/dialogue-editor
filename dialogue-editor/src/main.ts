@@ -122,15 +122,20 @@ class DialogueEditor {
     this.mcpBridge.connect({
       onStatusChange: (connected: boolean) => {
         this.updateMCPIndicator(connected);
-        // No toast - the indicator IS the feedback
+        if (connected) {
+          this.showMCPUpdate('Connected to Windsurf');
+        }
       },
-      onCommandExecuted: () => {
-        // Live reload: the graph updating IS the feedback (GitHub principle)
+      onCommandExecuted: (commandType?: string) => {
+        // Live reload + visual feedback
         this.render();
         this.pulseMCPIndicator();
+        
+        // Show what changed
+        const message = this.getUpdateMessage(commandType);
+        this.showMCPUpdate(message);
       },
       onAutoSave: () => {
-        // Auto-save silently - success is self-evident
         this.autoSaveProject();
         this.showAutoSaveIndicator();
       }
@@ -259,6 +264,7 @@ class DialogueEditor {
   // ==================== MCP VISUAL FEEDBACK ====================
 
   private mcpIndicator: HTMLElement | null = null;
+  private mcpUpdateNotification: HTMLElement | null = null;
   private autoSaveIndicator: HTMLElement | null = null;
 
   private setupMCPIndicator(): void {
@@ -269,6 +275,15 @@ class DialogueEditor {
       <span class="mcp-label">Windsurf</span>
     `;
     document.body.appendChild(this.mcpIndicator);
+
+    // MCP Update notification
+    this.mcpUpdateNotification = document.createElement('div');
+    this.mcpUpdateNotification.className = 'mcp-update';
+    this.mcpUpdateNotification.innerHTML = `
+      <span class="mcp-update-icon">↻</span>
+      <span class="mcp-update-text">Updated</span>
+    `;
+    document.body.appendChild(this.mcpUpdateNotification);
 
     // Auto-save indicator
     this.autoSaveIndicator = document.createElement('div');
@@ -295,6 +310,44 @@ class DialogueEditor {
       this.mcpIndicator.classList.remove('pulse');
       void this.mcpIndicator.offsetWidth; // Force reflow
       this.mcpIndicator.classList.add('pulse');
+    }
+  }
+
+  private getUpdateMessage(commandType?: string): string {
+    switch (commandType) {
+      case 'load_project': return 'Project loaded';
+      case 'edit_node_text': return 'Text updated';
+      case 'edit_node_speaker': return 'Speaker changed';
+      case 'add_node': return 'Node added';
+      case 'add_dialogue_node': return 'Dialogue added';
+      case 'add_hub_node': return 'Choice added';
+      case 'add_condition_node': return 'Condition added';
+      case 'add_instruction_node': return 'Instruction added';
+      case 'connect_nodes': return 'Nodes connected';
+      case 'delete_node': return 'Node deleted';
+      case 'add_character': return 'Character added';
+      case 'batch_add_dialogue': return 'Dialogue batch added';
+      default: return 'Graph updated';
+    }
+  }
+
+  private showMCPUpdate(message: string): void {
+    if (this.mcpUpdateNotification) {
+      const textEl = this.mcpUpdateNotification.querySelector('.mcp-update-text');
+      if (textEl) textEl.textContent = message;
+      
+      this.mcpUpdateNotification.classList.remove('visible');
+      void this.mcpUpdateNotification.offsetWidth; // Force reflow
+      this.mcpUpdateNotification.classList.add('visible');
+      
+      // Flash the canvas
+      this.canvas.classList.remove('mcp-flash');
+      void this.canvas.offsetWidth;
+      this.canvas.classList.add('mcp-flash');
+      
+      setTimeout(() => {
+        this.mcpUpdateNotification?.classList.remove('visible');
+      }, 2500);
     }
   }
 

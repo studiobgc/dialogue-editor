@@ -22,7 +22,7 @@ import {
 
 export interface MCPBridgeCallbacks {
   onStatusChange?: (connected: boolean) => void;
-  onCommandExecuted?: () => void;  // Called after any command - use for live reload
+  onCommandExecuted?: (commandType?: string) => void;  // Called after any command - use for live reload
   onAutoSave?: () => void;         // Called to trigger auto-save
 }
 
@@ -149,7 +149,7 @@ export class MCPBridge {
       
       // Trigger live reload and auto-save callbacks
       if (result.success) {
-        this.callbacks.onCommandExecuted?.();
+        this.callbacks.onCommandExecuted?.(message.command.type);
         this.callbacks.onAutoSave?.();
       }
     }

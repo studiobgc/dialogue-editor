@@ -454,6 +454,54 @@ html, body {
   100% { transform: scale(1); }
 }
 
+/* MCP Update notification - shows what changed */
+.mcp-update {
+  position: fixed;
+  top: var(--space-2);
+  right: calc(var(--space-3) + 140px);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--mcp-subtle);
+  border: 1px solid var(--mcp-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--mcp-default);
+  z-index: var(--z-sticky);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: all var(--transition-normal);
+  pointer-events: none;
+  max-width: 300px;
+}
+
+.mcp-update.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.mcp-update-icon {
+  font-size: var(--text-sm);
+}
+
+.mcp-update-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Canvas flash effect on update */
+.graph-canvas.mcp-flash {
+  animation: canvas-flash 300ms ease-out;
+}
+
+@keyframes canvas-flash {
+  0% { box-shadow: inset 0 0 0 2px var(--mcp-default); }
+  100% { box-shadow: inset 0 0 0 0px transparent; }
+}
+
 /* ========================================
    AUTO-SAVE INDICATOR
    ======================================== */
