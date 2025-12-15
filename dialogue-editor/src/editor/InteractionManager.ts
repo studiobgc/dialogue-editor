@@ -7,6 +7,7 @@ import { GraphModel } from '../core/GraphModel';
 import { GraphRenderer } from '../renderer/GraphRenderer';
 import { Viewport } from '../renderer/Viewport';
 import { QuickCreateMenu, QuickCreateOption } from '../ui/QuickCreateMenu';
+import { findNonOverlappingPosition, findPositionAfterNode } from '../utils/LayoutUtils';
 
 export interface DragState {
   type: 'none' | 'pan' | 'node' | 'selection' | 'connection';
@@ -421,12 +422,13 @@ export class InteractionManager {
     const centerX = (bounds.minX + bounds.maxX) / 2;
     const centerY = (bounds.minY + bounds.maxY) / 2;
     
-    // Snap to grid
-    const GRID_SIZE = 20;
-    const x = Math.round(centerX / GRID_SIZE) * GRID_SIZE;
-    const y = Math.round(centerY / GRID_SIZE) * GRID_SIZE;
+    // Use smart positioning to avoid overlap with existing nodes
+    const smartPos = findNonOverlappingPosition(
+      this.model.getNodes(),
+      { x: centerX, y: centerY }
+    );
     
-    const node = this.model.addNode(nodeType, { x, y });
+    const node = this.model.addNode(nodeType, smartPos);
     
     // Select the new node
     this.selectedNodeIds.clear();
@@ -804,11 +806,12 @@ export class InteractionManager {
 
     const { sourceNodeId, sourcePortIndex, worldPos } = this.pendingQuickCreate;
 
-    // Create the new node at the drop position
-    const newNode = this.model.addNode(option.type, {
-      x: worldPos.x,
-      y: worldPos.y - 40 // Offset slightly to position nicely
-    });
+    // Create the new node with smart positioning to avoid overlap
+    const smartPos = findNonOverlappingPosition(
+      this.model.getNodes(),
+      { x: worldPos.x, y: worldPos.y - 40 }
+    );
+    const newNode = this.model.addNode(option.type, smartPos);
 
     // Apply preset data if provided (e.g., pre-selected speaker)
     if (option.preset?.speakerId && (newNode.nodeType === 'dialogue' || newNode.nodeType === 'dialogueFragment')) {
@@ -967,10 +970,12 @@ export class InteractionManager {
   }
 
   /**
-   * Add a node at a position
+   * Add a node at a position with smart positioning to avoid overlap
    */
   addNode(nodeType: NodeType, worldPos: Position): Node {
-    const node = this.model.addNode(nodeType, worldPos);
+    // Use smart positioning to prevent node overlap
+    const smartPos = findNonOverlappingPosition(this.model.getNodes(), worldPos);
+    const node = this.model.addNode(nodeType, smartPos);
     
     // Select the new node
     this.selectedNodeIds.clear();

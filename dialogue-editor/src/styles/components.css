@@ -564,14 +564,96 @@
   background: var(--interactive-muted);
 }
 
+.project-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.project-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .project-card-name {
+  font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+  color: var(--text-primary);
   margin-bottom: var(--space-1);
 }
 
 .project-card-meta {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.project-card-date {
+  font-size: var(--text-2xs);
+  color: var(--text-disabled);
+}
+
+.project-card-actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.project-card:hover .project-card-actions {
+  opacity: 1;
+}
+
+.project-card-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.project-card-btn:hover {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+.project-card-btn.danger:hover {
+  background: var(--status-error-subtle);
+  color: var(--status-error);
+}
+
+.project-new-icon {
+  font-weight: var(--weight-bold);
+}
+
+.project-browser-empty {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--text-tertiary);
+}
+
+.project-browser-empty-icon {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+  opacity: 0.5;
+}
+
+.project-browser-empty-text {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.project-browser-empty-hint {
+  font-size: var(--text-xs);
 }
 
 /* ========================================

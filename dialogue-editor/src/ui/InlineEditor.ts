@@ -82,14 +82,22 @@ export class InlineEditor {
     this.editor = document.createElement('div');
     this.editor.className = 'inline-editor-v2';
 
-    // Position it relative to the node
-    const editorWidth = 360;
-    let x = screenPosition.x + canvasRect.left - editorWidth / 2;
-    let y = screenPosition.y + canvasRect.top - 20;
+    // Position it to the RIGHT of the node so user can see updates
+    const editorWidth = 320;
+    const nodeWidth = this.currentNode.size?.width || 200;
+    
+    // Default: position to the right of the node
+    let x = screenPosition.x + canvasRect.left + nodeWidth / 2 + 20;
+    let y = screenPosition.y + canvasRect.top - 60;
+
+    // If not enough room on right, position to the left
+    if (x + editorWidth > window.innerWidth - 20) {
+      x = screenPosition.x + canvasRect.left - nodeWidth / 2 - editorWidth - 20;
+    }
 
     // Keep on screen
     x = Math.max(20, Math.min(x, window.innerWidth - editorWidth - 20));
-    y = Math.max(20, Math.min(y, window.innerHeight - 300));
+    y = Math.max(60, Math.min(y, window.innerHeight - 280));
 
     this.editor.style.left = `${x}px`;
     this.editor.style.top = `${y}px`;
