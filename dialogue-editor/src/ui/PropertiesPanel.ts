@@ -2,7 +2,7 @@
  * Properties panel for editing selected node properties
  */
 
-import { Node, NodeType, Character } from '../types/graph';
+import { Node, Character } from '../types/graph';
 import { NODE_CONFIGS } from '../core/NodeFactory';
 
 export type PropertyChangeCallback = (nodeId: string, property: string, value: unknown) => void;

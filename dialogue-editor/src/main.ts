@@ -25,19 +25,19 @@ class DialogueEditor {
   private renderer: GraphRenderer;
   private interaction: InteractionManager;
   private toolbar: Toolbar;
-  private palette: Palette;
+  private _palette: Palette;
   private propertiesPanel: PropertiesPanel;
   private contextMenu: ContextMenu;
   private statusBar: StatusBar;
   private canvas: HTMLCanvasElement;
   private welcomeOverlay: WelcomeOverlay;
-  private aiChat: AIChat;
+  private _aiChat: AIChat;
   private projectManager: ProjectManager;
   private commandPalette: CommandPalette;
   private coachmarks: Coachmarks;
   private inlineEditor: InlineEditor;
   private floatingToolbar: FloatingToolbar;
-  private isFirstLaunch: boolean = true;
+  private _isFirstLaunch: boolean = true;
 
   constructor() {
     // Get canvas element
@@ -70,12 +70,12 @@ class DialogueEditor {
 
     // Initialize UI components
     this.toolbar = new Toolbar('toolbar');
-    this.palette = new Palette('palette', this.onPaletteDrop.bind(this));
+    this._palette = new Palette('palette', this.onPaletteDrop.bind(this));
     this.propertiesPanel = new PropertiesPanel('properties-panel', this.onPropertyChange.bind(this));
     this.contextMenu = new ContextMenu();
     this.statusBar = new StatusBar('status-bar');
     this.welcomeOverlay = new WelcomeOverlay(this.onTemplateSelected.bind(this));
-    this.aiChat = new AIChat(
+    this._aiChat = new AIChat(
       'ai-chat',
       this.onApplyDialogue.bind(this)
     );
@@ -146,7 +146,7 @@ class DialogueEditor {
     }
   }
 
-  private onProjectChange(projectId: string, graphData: string | null): void {
+  private onProjectChange(_projectId: string, graphData: string | null): void {
     if (graphData) {
       try {
         const loaded = GraphModel.fromJSON(graphData);
@@ -169,7 +169,7 @@ class DialogueEditor {
     this.hideCanvasHint();
   }
 
-  private async onAIMessage(message: string): Promise<string> {
+  private async _onAIMessage(message: string): Promise<string> {
     // This is where you'd integrate with an actual AI API
     // For now, we'll simulate a response with dialogue generation
     return this.generateDialogueResponse(message);
@@ -235,7 +235,7 @@ class DialogueEditor {
     return `Here's a quest dialogue I've created for you:\n\n**Quest Giver** offers a dangerous mission to retrieve an ancient artifact. The player can:\n- **Negotiate** for better rewards\n- **Accept** immediately\n- **Decline** the quest\n\nThe dialogue includes proper branching and an instruction node to start the quest.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
   }
 
-  private generateShopDialogue(context: string): string {
+  private generateShopDialogue(_context: string): string {
     const dialogue: GeneratedDialogue = {
       title: 'Shop Dialogue',
       characters: [
@@ -405,10 +405,10 @@ class DialogueEditor {
   private checkFirstLaunch(): void {
     const hasVisited = localStorage.getItem('dialogue-editor-visited');
     if (!hasVisited) {
-      this.isFirstLaunch = true;
+      this._isFirstLaunch = true;
       this.welcomeOverlay.show();
     } else {
-      this.isFirstLaunch = false;
+      this._isFirstLaunch = false;
       // Show empty state hint if no nodes
       this.updateCanvasHint();
     }
@@ -1066,7 +1066,7 @@ class DialogueEditor {
 
   // ==================== DEMO CONTENT ====================
 
-  private createDemoContent(): void {
+  private _createDemoContent(): void {
     // Add some demo characters
     this.model.addCharacter('Player', '#4a90e2');
     this.model.addCharacter('NPC Guard', '#e74c3c');

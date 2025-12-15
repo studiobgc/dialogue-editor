@@ -14,7 +14,7 @@ import {
   Character
 } from '../types/graph';
 import { IdGenerator } from './IdGenerator';
-import { NodeFactory, NODE_CONFIGS } from './NodeFactory';
+import { NodeFactory } from './NodeFactory';
 
 export interface GraphChangeEvent {
   type: 'node-added' | 'node-removed' | 'node-updated' | 'connection-added' | 'connection-removed' | 'graph-loaded';

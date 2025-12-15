@@ -2,7 +2,7 @@
  * Context menu component
  */
 
-import { Position, NodeType } from '../types/graph';
+import { NodeType } from '../types/graph';
 
 export interface ContextMenuItem {
   id: string;

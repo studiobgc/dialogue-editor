@@ -3,7 +3,7 @@
  * Uses a simple grid-based approach for O(1) lookups
  */
 
-import { Node, Position } from '../types/graph';
+import { Node } from '../types/graph';
 
 interface GridCell {
   nodeIds: Set<string>;
@@ -18,7 +18,7 @@ export class SpatialIndex {
     this.cellSize = cellSize;
   }
 
-  private getCellKey(x: number, y: number): string {
+  private _getCellKey(x: number, y: number): string {
     const cellX = Math.floor(x / this.cellSize);
     const cellY = Math.floor(y / this.cellSize);
     return `${cellX},${cellY}`;

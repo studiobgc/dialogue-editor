@@ -44,7 +44,7 @@ export class ConnectionRenderer {
     ctx: CanvasRenderingContext2D,
     connection: Connection,
     nodes: Map<string, Node>,
-    viewport: Viewport,
+    _viewport: Viewport,
     isSelected: boolean,
     isHovered: boolean
   ): void {

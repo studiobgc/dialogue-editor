@@ -41,7 +41,7 @@ export class InteractionManager {
   private selectedNodeIds: Set<string> = new Set();
   private selectedConnectionId: string | null = null;
   private hoveredNodeId: string | null = null;
-  private hoveredPortInfo: { nodeId: string; type: 'input' | 'output'; index: number } | null = null;
+  private _hoveredPortInfo: { nodeId: string; type: 'input' | 'output'; index: number } | null = null;
 
   private lastClickTime = 0;
   private lastClickNodeId: string | null = null;
@@ -866,14 +866,14 @@ export class InteractionManager {
     if (hitNode) {
       const portHit = this.renderer.getNodeRenderer().hitTestPort(hitNode, worldPos);
       if (portHit) {
-        this.hoveredPortInfo = { nodeId: hitNode.id, type: portHit.type, index: portHit.index };
+        this._hoveredPortInfo = { nodeId: hitNode.id, type: portHit.type, index: portHit.index };
         this.canvas.style.cursor = 'crosshair';
       } else {
-        this.hoveredPortInfo = null;
+        this._hoveredPortInfo = null;
         this.canvas.style.cursor = this.dragState.type === 'none' ? 'default' : this.canvas.style.cursor;
       }
     } else {
-      this.hoveredPortInfo = null;
+      this._hoveredPortInfo = null;
       if (this.dragState.type === 'none') {
         this.canvas.style.cursor = 'default';
       }

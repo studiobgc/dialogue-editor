@@ -52,7 +52,7 @@ export class GraphRenderer {
   private selectionBox: { start: Position; end: Position } | null = null;
   private alignmentGuides: { type: 'h' | 'v'; pos: number }[] = [];
 
-  private needsRender = true;
+  private _needsRender = true;
   
   // Smooth animation state
   private targetZoom: number = 1;
@@ -195,7 +195,7 @@ export class GraphRenderer {
   // ==================== RENDERING ====================
 
   requestRender(): void {
-    this.needsRender = true;
+    this._needsRender = true;
     this.renderLoop.requestRender();
   }
 

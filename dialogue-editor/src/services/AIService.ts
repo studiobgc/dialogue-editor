@@ -113,7 +113,7 @@ export class AIService {
     return response;
   }
 
-  private async callAnthropic(userMessage: string): Promise<string> {
+  private async callAnthropic(_userMessage: string): Promise<string> {
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
