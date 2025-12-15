@@ -3061,3 +3061,5 @@ input, textarea, select {
   background: var(--accent-secondary);
   border-color: var(--accent-secondary);
 }
+
+/* Import additional styles at end to avoid @import order issues */

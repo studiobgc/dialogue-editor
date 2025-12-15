@@ -21,6 +21,8 @@ import { NodeFactory } from './core/NodeFactory';
 import { UnrealExporter } from './services/UnrealExporter';
 import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/BulkImporter';
 import { MCPBridge } from './services/MCPBridge';
+import { FlowPreview } from './ui/FlowPreview';
+import { StatsPanel } from './ui/StatsPanel';
 
 class DialogueEditor {
   private model: GraphModel;
@@ -39,6 +41,8 @@ class DialogueEditor {
   private inlineEditor: InlineEditor;
   private floatingToolbar: FloatingToolbar;
   private mcpBridge: MCPBridge;
+  private flowPreview: FlowPreview;
+  private statsPanel: StatsPanel;
   private _isFirstLaunch: boolean = true;
 
   constructor() {
@@ -133,6 +137,23 @@ class DialogueEditor {
     this.model.addListener(() => {
       this.mcpBridge.sendState();
     });
+
+    // Initialize Flow Preview for playtesting
+    this.flowPreview = new FlowPreview(this.model, (nodeId) => {
+      // Focus on node when stepping through preview
+      const node = this.model.getNode(nodeId);
+      if (node) {
+        this.renderer.setSelectedNodes(new Set([nodeId]));
+        this.renderer.getViewport().pan(
+          -node.position.x + this.canvas.width / 4,
+          -node.position.y + this.canvas.height / 4
+        );
+        this.render();
+      }
+    });
+
+    // Initialize Stats Panel
+    this.statsPanel = new StatsPanel(this.model);
 
     // Setup toolbar actions
     this.setupToolbar();
@@ -390,6 +411,22 @@ class DialogueEditor {
       icon: '📤',
       label: 'Export for Unreal',
       onClick: () => this.exportForUnreal()
+    });
+
+    this.toolbar.addSeparator();
+
+    this.toolbar.addAction({
+      id: 'preview',
+      icon: '▶️',
+      label: 'Playtest',
+      onClick: () => this.flowPreview.show()
+    });
+
+    this.toolbar.addAction({
+      id: 'stats',
+      icon: '📊',
+      label: 'Stats',
+      onClick: () => this.statsPanel.toggle()
     });
 
     this.toolbar.addSeparator();
