@@ -22,7 +22,7 @@ import {
 
 export interface MCPBridgeCallbacks {
   onStatusChange?: (connected: boolean) => void;
-  onCommandExecuted?: (commandType?: string) => void;  // Called after any command - use for live reload
+  onCommandExecuted?: (summary: string) => void;  // Called with human-readable summary of what changed
   onAutoSave?: () => void;         // Called to trigger auto-save
 }
 
@@ -149,10 +149,90 @@ export class MCPBridge {
       
       // Trigger live reload and auto-save callbacks
       if (result.success) {
-        this.callbacks.onCommandExecuted?.(message.command.type);
+        const summary = this.buildChangeSummary(message.command, result);
+        this.callbacks.onCommandExecuted?.(summary);
         this.callbacks.onAutoSave?.();
       }
     }
+  }
+
+  private buildChangeSummary(cmd: MCPCommand, result: { success: boolean; nodeId?: string }): string {
+    const graph = this.model.getGraph();
+    // Cast to access optional properties
+    const c = cmd as unknown as Record<string, unknown>;
+    
+    switch (cmd.type) {
+      case 'load_project': {
+        const nodeCount = graph.nodes.length;
+        const charCount = graph.characters.length;
+        return `Loaded ${nodeCount} nodes, ${charCount} characters`;
+      }
+      
+      case 'edit_node_text': {
+        const node = cmd.nodeId ? this.model.getNode(cmd.nodeId) : null;
+        const speaker = this.getSpeakerName(node || null);
+        const text = c.text as string | undefined;
+        const preview = text ? `"${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"` : '';
+        return speaker ? `${speaker}: ${preview}` : `Updated: ${preview}`;
+      }
+      
+      case 'edit_node_speaker': {
+        const speakerId = c.speakerId as string | undefined;
+        const char = speakerId ? this.model.getCharacters().find(ch => ch.id === speakerId) : null;
+        return char ? `Speaker → ${char.displayName}` : 'Changed speaker';
+      }
+      
+      case 'add_node':
+      case 'add_dialogue_node': {
+        const speakerId = c.speakerId as string | undefined;
+        const text = c.text as string | undefined;
+        const char = speakerId ? this.model.getCharacters().find(ch => ch.id === speakerId) : null;
+        const preview = text ? `"${text.substring(0, 25)}..."` : '';
+        return char ? `+ ${char.displayName}: ${preview}` : '+ New dialogue';
+      }
+      
+      case 'add_hub_node':
+        return '+ Choice point';
+      
+      case 'add_condition_node': {
+        const expr = c.expression as string | undefined;
+        return expr ? `+ If: ${expr}` : '+ Condition';
+      }
+      
+      case 'add_instruction_node': {
+        const expr = c.expression as string | undefined;
+        return expr ? `+ Set: ${expr}` : '+ Instruction';
+      }
+      
+      case 'connect_nodes':
+        return '→ Nodes connected';
+      
+      case 'delete_node':
+        return '- Node removed';
+      
+      case 'add_character': {
+        const name = c.name as string | undefined;
+        return name ? `+ Character: ${name}` : '+ Character';
+      }
+      
+      case 'batch_add_dialogue': {
+        const dialogues = c.dialogues as unknown[] | undefined;
+        const count = dialogues?.length || 0;
+        return `+ ${count} dialogue lines`;
+      }
+      
+      default:
+        return 'Graph updated';
+    }
+  }
+
+  private getSpeakerName(node: import('../types/graph').Node | null): string | null {
+    if (!node) return null;
+    const data = node.data as { data?: { speaker?: string } };
+    const speakerId = data?.data?.speaker;
+    if (!speakerId) return null;
+    const char = this.model.getCharacters().find(c => c.id === speakerId);
+    return char?.displayName || null;
   }
 
   private executeCommand(cmd: MCPCommand): { success: boolean; error?: string; nodeId?: string } {

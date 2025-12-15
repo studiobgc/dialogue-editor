@@ -126,14 +126,11 @@ class DialogueEditor {
           this.showMCPUpdate('Connected to Windsurf');
         }
       },
-      onCommandExecuted: (commandType?: string) => {
+      onCommandExecuted: (summary: string) => {
         // Live reload + visual feedback
         this.render();
         this.pulseMCPIndicator();
-        
-        // Show what changed
-        const message = this.getUpdateMessage(commandType);
-        this.showMCPUpdate(message);
+        this.showMCPUpdate(summary);
       },
       onAutoSave: () => {
         this.autoSaveProject();
@@ -310,24 +307,6 @@ class DialogueEditor {
       this.mcpIndicator.classList.remove('pulse');
       void this.mcpIndicator.offsetWidth; // Force reflow
       this.mcpIndicator.classList.add('pulse');
-    }
-  }
-
-  private getUpdateMessage(commandType?: string): string {
-    switch (commandType) {
-      case 'load_project': return 'Project loaded';
-      case 'edit_node_text': return 'Text updated';
-      case 'edit_node_speaker': return 'Speaker changed';
-      case 'add_node': return 'Node added';
-      case 'add_dialogue_node': return 'Dialogue added';
-      case 'add_hub_node': return 'Choice added';
-      case 'add_condition_node': return 'Condition added';
-      case 'add_instruction_node': return 'Instruction added';
-      case 'connect_nodes': return 'Nodes connected';
-      case 'delete_node': return 'Node deleted';
-      case 'add_character': return 'Character added';
-      case 'batch_add_dialogue': return 'Dialogue batch added';
-      default: return 'Graph updated';
     }
   }
 
