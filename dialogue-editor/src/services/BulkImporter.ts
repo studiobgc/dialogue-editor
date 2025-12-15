@@ -9,8 +9,125 @@
  */
 
 import { GraphModel } from '../core/GraphModel';
-import { NodeType, Node, Position } from '../types/graph';
-import { BulkDialogueImport, autoLayoutDialogue } from './ArticyExporter';
+import { NodeType, Node, Position, Connection } from '../types/graph';
+
+/**
+ * Bulk import schema for AI-generated dialogue trees
+ */
+export interface BulkDialogueImport {
+  version: '1.0';
+  metadata: {
+    title: string;
+    description?: string;
+    author?: string;
+    createdAt: string;
+  };
+  characters: Array<{
+    id: string;
+    name: string;
+    color: string;
+    description?: string;
+  }>;
+  variables?: Record<string, Record<string, boolean | number | string>>;
+  acts: Array<{
+    id: string;
+    name: string;
+    scenes: Array<{
+      id: string;
+      name: string;
+      location?: string;
+      conversations: Array<{
+        id: string;
+        name: string;
+        startNodeId: string;
+        nodes: Array<{
+          id: string;
+          type: NodeType;
+          speaker?: string;
+          text?: string;
+          menuText?: string;
+          stageDirections?: string;
+          condition?: string;
+          instruction?: string;
+          outputs: Array<{
+            label?: string;
+            targetNodeId: string;
+          }>;
+        }>;
+      }>;
+    }>;
+  }>;
+}
+
+/**
+ * Auto-layout algorithm for imported dialogue trees
+ */
+export function autoLayoutDialogue(nodes: Node[], connections: Connection[]): void {
+  const outgoing = new Map<string, string[]>();
+  const incoming = new Map<string, string[]>();
+  
+  for (const node of nodes) {
+    outgoing.set(node.id, []);
+    incoming.set(node.id, []);
+  }
+  
+  for (const conn of connections) {
+    outgoing.get(conn.fromNodeId)?.push(conn.toNodeId);
+    incoming.get(conn.toNodeId)?.push(conn.fromNodeId);
+  }
+  
+  const roots = nodes.filter(n => (incoming.get(n.id)?.length || 0) === 0);
+  const layers = new Map<string, number>();
+  const visited = new Set<string>();
+  const queue: Array<{ id: string; layer: number }> = roots.map(n => ({ id: n.id, layer: 0 }));
+  
+  while (queue.length > 0) {
+    const { id, layer } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    
+    const currentLayer = Math.max(layers.get(id) || 0, layer);
+    layers.set(id, currentLayer);
+    
+    for (const targetId of outgoing.get(id) || []) {
+      if (!visited.has(targetId)) {
+        queue.push({ id: targetId, layer: currentLayer + 1 });
+      }
+    }
+  }
+  
+  for (const node of nodes) {
+    if (!layers.has(node.id)) {
+      layers.set(node.id, 0);
+    }
+  }
+  
+  const layerGroups = new Map<number, Node[]>();
+  for (const node of nodes) {
+    const layer = layers.get(node.id) || 0;
+    if (!layerGroups.has(layer)) {
+      layerGroups.set(layer, []);
+    }
+    layerGroups.get(layer)!.push(node);
+  }
+  
+  const HORIZONTAL_SPACING = 350;
+  const VERTICAL_SPACING = 150;
+  const START_X = 100;
+  const START_Y = 100;
+  
+  const sortedLayers = Array.from(layerGroups.keys()).sort((a, b) => a - b);
+  
+  for (const layer of sortedLayers) {
+    const nodesInLayer = layerGroups.get(layer)!;
+    nodesInLayer.forEach((node, index) => {
+      node.position = {
+        x: START_X + layer * HORIZONTAL_SPACING,
+        y: START_Y + index * VERTICAL_SPACING
+      };
+    });
+  }
+}
 
 interface ImportResult {
   success: boolean;
@@ -150,7 +267,7 @@ export class BulkImporter {
               }
 
               // Queue connections
-              nodeDef.outputs.forEach((output, outputIndex) => {
+              nodeDef.outputs.forEach((output: { label?: string; targetNodeId: string }, outputIndex: number) => {
                 // Ensure node has enough output ports
                 const currentNode = this.model.getNode(node.id);
                 if (currentNode && currentNode.outputPorts.length <= outputIndex) {

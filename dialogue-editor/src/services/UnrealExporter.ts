@@ -1,25 +1,261 @@
 /**
- * UnrealExporter - Exact Articy:draft X JSON format for ArticyXImporterForUnreal
+ * UnrealExporter - Production-grade Articy:draft X JSON export
  * 
- * This generates the EXACT structure the Unreal plugin expects.
- * Based on deep analysis of: https://github.com/ArticySoftware/ArticyXImporterForUnreal
+ * Features:
+ * - Exact Articy:draft X v1.4.7.0 format for ArticyXImporter
+ * - Asset references (portraits, voice-over audio)
+ * - Multi-language localization support
+ * - Custom templates and features
+ * - Script validation before export
+ * - Export validation with error reporting
+ * - Deterministic IDs for stable exports
  * 
  * The ArticyXImporter expects these top-level sections:
- * - Settings
- * - Project  
- * - Languages
- * - GlobalVariables
- * - ScriptMethods
- * - ObjectDefinitions
- * - Packages (contains Models with Properties and Templates)
- * - Hierarchy
- * 
- * Each Package has:
- * - Files.Objects.json (the actual node data)
- * - Files.Texts.json (localized strings)
+ * - Settings, Project, Languages, GlobalVariables
+ * - ScriptMethods, ObjectDefinitions, Packages, Hierarchy
  */
 
-import { DialogueGraph, Node, Connection, Character, NodeType } from '../types/graph';
+import { DialogueGraph, Node, Character, NodeType } from '../types/graph';
+
+// ============================================================
+// ASSET MANAGEMENT
+// ============================================================
+
+export interface AssetReference {
+  id: string;
+  type: 'Image' | 'Audio' | 'Video';
+  path: string;
+  filename: string;
+}
+
+export class AssetManager {
+  private assets = new Map<string, AssetReference>();
+  private idGen: ArticyIdGenerator;
+
+  constructor(idGen: ArticyIdGenerator) {
+    this.idGen = idGen;
+  }
+
+  addPortrait(characterId: string, imagePath: string): string {
+    const id = this.idGen.fromSeed(`portrait_${characterId}`);
+    this.assets.set(id, {
+      id,
+      type: 'Image',
+      path: imagePath,
+      filename: imagePath.split('/').pop() || 'portrait.png'
+    });
+    return id;
+  }
+
+  addVoiceOver(nodeId: string, audioPath: string): string {
+    const id = this.idGen.fromSeed(`vo_${nodeId}`);
+    this.assets.set(id, {
+      id,
+      type: 'Audio',
+      path: audioPath,
+      filename: audioPath.split('/').pop() || 'voice.wav'
+    });
+    return id;
+  }
+
+  getAsset(id: string): AssetReference | undefined {
+    return this.assets.get(id);
+  }
+
+  getAllAssets(): AssetReference[] {
+    return Array.from(this.assets.values());
+  }
+
+  exportAssetModels(): ArticyModel[] {
+    return this.getAllAssets().map(asset => ({
+      Type: 'Asset',
+      Properties: {
+        Id: asset.id,
+        TechnicalName: asset.filename.replace(/[^a-zA-Z0-9]/g, '_'),
+        Parent: '0x0000000000000000',
+        AssetRef: asset.path,
+        Category: asset.type
+      }
+    }));
+  }
+}
+
+// ============================================================
+// LOCALIZATION SYSTEM  
+// ============================================================
+
+export interface LocalizedText {
+  [languageCode: string]: string;
+}
+
+export class LocalizationManager {
+  private strings = new Map<string, LocalizedText>();
+  private languages: string[] = ['en'];
+  private defaultLanguage = 'en';
+
+  addLanguage(code: string, name?: string): void {
+    if (!this.languages.includes(code)) {
+      this.languages.push(code);
+    }
+  }
+
+  setDefaultLanguage(code: string): void {
+    this.defaultLanguage = code;
+    if (!this.languages.includes(code)) {
+      this.languages.push(code);
+    }
+  }
+
+  setText(key: string, language: string, text: string): void {
+    if (!this.strings.has(key)) {
+      this.strings.set(key, {});
+    }
+    this.strings.get(key)![language] = text;
+  }
+
+  getText(key: string, language?: string): string {
+    const lang = language || this.defaultLanguage;
+    const entry = this.strings.get(key);
+    return entry?.[lang] || entry?.[this.defaultLanguage] || '';
+  }
+
+  getLanguages(): string[] {
+    return this.languages;
+  }
+
+  exportLanguages(idGen: ArticyIdGenerator): ArticyLanguages {
+    const languageNames: Record<string, string> = {
+      en: 'English', de: 'German', fr: 'French', es: 'Spanish',
+      it: 'Italian', pt: 'Portuguese', ru: 'Russian', zh: 'Chinese',
+      ja: 'Japanese', ko: 'Korean'
+    };
+
+    return {
+      Languages: this.languages.map(code => ({
+        CultureName: code,
+        ArticyLanguageId: idGen.fromSeed(`lang_${code}`),
+        LanguageName: languageNames[code] || code,
+        IsVoiceOver: false
+      }))
+    };
+  }
+}
+
+// ============================================================
+// TEMPLATE SYSTEM (Custom Properties)
+// ============================================================
+
+export interface TemplateFeature {
+  name: string;
+  technicalName: string;
+  properties: Record<string, unknown>;
+}
+
+export interface NodeTemplate {
+  name: string;
+  technicalName: string;
+  baseType: NodeType;
+  features: TemplateFeature[];
+}
+
+export const DEFAULT_TEMPLATES: NodeTemplate[] = [
+  {
+    name: 'Quest Dialogue',
+    technicalName: 'QuestDialogue',
+    baseType: 'dialogueFragment',
+    features: [{
+      name: 'Quest Info',
+      technicalName: 'QuestInfo',
+      properties: { QuestId: '', QuestStage: '', IsRequired: false }
+    }]
+  },
+  {
+    name: 'Bark',
+    technicalName: 'Bark',
+    baseType: 'dialogueFragment',
+    features: [{
+      name: 'Bark Settings',
+      technicalName: 'BarkSettings',
+      properties: { Priority: 0, Cooldown: 5.0, Range: 1000 }
+    }]
+  }
+];
+
+// ============================================================
+// EXPORT VALIDATION
+// ============================================================
+
+export interface ValidationError {
+  type: 'error' | 'warning';
+  nodeId?: string;
+  message: string;
+}
+
+export class ExportValidator {
+  validate(graph: DialogueGraph): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    // Check for orphan nodes (no connections)
+    for (const node of graph.nodes) {
+      const hasInput = graph.connections.some(c => c.toNodeId === node.id);
+      const hasOutput = graph.connections.some(c => c.fromNodeId === node.id);
+      
+      if (!hasInput && !hasOutput && graph.nodes.length > 1) {
+        errors.push({
+          type: 'warning',
+          nodeId: node.id,
+          message: `Node "${node.technicalName || node.id}" has no connections`
+        });
+      }
+    }
+
+    // Check for missing speakers in dialogue nodes
+    for (const node of graph.nodes) {
+      if (node.data.type === 'dialogue' || node.data.type === 'dialogueFragment') {
+        if (!node.data.data.speaker) {
+          errors.push({
+            type: 'warning',
+            nodeId: node.id,
+            message: `Dialogue node "${node.technicalName || node.id}" has no speaker assigned`
+          });
+        }
+        if (!node.data.data.text?.trim()) {
+          errors.push({
+            type: 'warning',
+            nodeId: node.id,
+            message: `Dialogue node "${node.technicalName || node.id}" has no text`
+          });
+        }
+      }
+    }
+
+    // Check for empty conditions
+    for (const node of graph.nodes) {
+      if (node.data.type === 'condition') {
+        if (!node.data.data.script?.expression?.trim()) {
+          errors.push({
+            type: 'error',
+            nodeId: node.id,
+            message: `Condition node "${node.technicalName || node.id}" has no expression`
+          });
+        }
+      }
+    }
+
+    // Check for circular references in jumps
+    for (const node of graph.nodes) {
+      if (node.data.type === 'jump' && node.data.data.targetNodeId === node.id) {
+        errors.push({
+          type: 'error',
+          nodeId: node.id,
+          message: `Jump node "${node.technicalName || node.id}" targets itself`
+        });
+      }
+    }
+
+    return errors;
+  }
+}
 
 // ============================================================
 // ARTICY ID FORMAT (0x prefix, 16 hex chars)
@@ -248,6 +484,28 @@ const ARTICY_TYPE_MAP: Record<NodeType, { type: string; class: string }> = {
 // MAIN EXPORTER
 // ============================================================
 
+export interface ExportOptions {
+  projectName?: string;
+  includeValidation?: boolean;
+  languages?: string[];
+  includePositionData?: boolean;
+  prettyPrint?: boolean;
+}
+
+export interface ExportResult {
+  success: boolean;
+  data?: ArticyExportRoot;
+  json?: string;
+  files?: { filename: string; content: string }[];
+  validation: ValidationError[];
+  stats: {
+    nodeCount: number;
+    connectionCount: number;
+    characterCount: number;
+    wordCount: number;
+  };
+}
+
 export class UnrealExporter {
   private graph: DialogueGraph;
   private idGen = new ArticyIdGenerator();
@@ -255,10 +513,110 @@ export class UnrealExporter {
   private charIdMap = new Map<string, string>();
   private pinIdMap = new Map<string, string>();
   private shortIdCounter = 1;
+  
+  // Production features
+  public assets: AssetManager;
+  public localization: LocalizationManager;
+  private validator = new ExportValidator();
+  private options: ExportOptions;
 
-  constructor(graph: DialogueGraph) {
+  constructor(graph: DialogueGraph, options: ExportOptions = {}) {
     this.graph = graph;
+    this.options = {
+      includeValidation: true,
+      includePositionData: true,
+      prettyPrint: true,
+      languages: ['en'],
+      ...options
+    };
+    this.assets = new AssetManager(this.idGen);
+    this.localization = new LocalizationManager();
+    
+    // Initialize languages
+    this.options.languages?.forEach(lang => this.localization.addLanguage(lang));
+    
     this.buildIdMaps();
+  }
+  
+  // ============================================================
+  // PUBLIC API
+  // ============================================================
+  
+  /**
+   * Validate the graph before export
+   */
+  validate(): ValidationError[] {
+    return this.validator.validate(this.graph);
+  }
+  
+  /**
+   * Full export with validation and stats
+   */
+  exportWithValidation(): ExportResult {
+    const validation = this.options.includeValidation ? this.validate() : [];
+    const hasErrors = validation.some(v => v.type === 'error');
+    
+    const stats = this.calculateStats();
+    
+    if (hasErrors) {
+      return {
+        success: false,
+        validation,
+        stats
+      };
+    }
+    
+    const data = this.export();
+    const json = JSON.stringify(data, null, this.options.prettyPrint ? 2 : 0);
+    
+    return {
+      success: true,
+      data,
+      json,
+      files: this.exportForUnreal(),
+      validation,
+      stats
+    };
+  }
+  
+  /**
+   * Add a portrait image for a character
+   */
+  addCharacterPortrait(characterId: string, imagePath: string): string {
+    return this.assets.addPortrait(characterId, imagePath);
+  }
+  
+  /**
+   * Add voice-over audio for a dialogue node
+   */
+  addVoiceOver(nodeId: string, audioPath: string): string {
+    return this.assets.addVoiceOver(nodeId, audioPath);
+  }
+  
+  /**
+   * Add localized text for a node
+   */
+  addLocalizedText(nodeId: string, field: 'Text' | 'MenuText' | 'StageDirections', language: string, text: string): void {
+    const key = `${nodeId}_${field}`;
+    this.localization.setText(key, language, text);
+  }
+  
+  private calculateStats(): ExportResult['stats'] {
+    let wordCount = 0;
+    
+    for (const node of this.graph.nodes) {
+      if (node.data.type === 'dialogue' || node.data.type === 'dialogueFragment') {
+        const text = node.data.data.text || '';
+        wordCount += text.split(/\s+/).filter(w => w.length > 0).length;
+      }
+    }
+    
+    return {
+      nodeCount: this.graph.nodes.length,
+      connectionCount: this.graph.connections.length,
+      characterCount: this.graph.characters.length,
+      wordCount
+    };
   }
 
   private buildIdMaps(): void {
