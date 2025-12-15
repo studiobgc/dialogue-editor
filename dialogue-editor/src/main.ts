@@ -20,6 +20,7 @@ import { Node, NodeType, Position } from './types/graph';
 import { NodeFactory } from './core/NodeFactory';
 import { UnrealExporter } from './services/UnrealExporter';
 import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/BulkImporter';
+import { MCPBridge } from './services/MCPBridge';
 
 class DialogueEditor {
   private model: GraphModel;
@@ -32,11 +33,12 @@ class DialogueEditor {
   private statusBar: StatusBar;
   private canvas: HTMLCanvasElement;
   private welcomeOverlay: WelcomeOverlay;
-    private projectManager: ProjectManager;
+  private projectManager: ProjectManager;
   private commandPalette: CommandPalette;
   private coachmarks: Coachmarks;
   private inlineEditor: InlineEditor;
   private floatingToolbar: FloatingToolbar;
+  private mcpBridge: MCPBridge;
   private _isFirstLaunch: boolean = true;
 
   constructor() {
@@ -100,6 +102,19 @@ class DialogueEditor {
       onDelete: () => this.interaction.deleteSelected(),
       onAddAfter: (node) => this.createNodeAfter(node.id, 'dialogueFragment'),
       onChangeColor: (node) => this.showColorPicker(node)
+    });
+
+    // Initialize MCP Bridge for live AI editing through Windsurf
+    this.mcpBridge = new MCPBridge(this.model);
+    this.mcpBridge.connect((connected) => {
+      if (connected) {
+        this.statusBar.setMessage('🤖 AI Connected', 2000);
+      }
+    });
+
+    // Update MCP state when graph changes
+    this.model.addListener(() => {
+      this.mcpBridge.sendState();
     });
 
     // Setup toolbar actions
