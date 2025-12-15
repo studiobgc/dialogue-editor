@@ -50,6 +50,12 @@ class DialogueEditor {
     this.model = new GraphModel();
     this.renderer = new GraphRenderer(this.canvas);
     
+    // Set up character lookup so nodes display names instead of IDs
+    this.renderer.setCharacterLookup((id: string) => {
+      const chars = this.model.getCharacters();
+      return chars.find(c => c.id === id);
+    });
+    
     // Set up viewport animation callback for smooth animated transitions
     this.renderer.getViewport().setAnimationCallback(() => {
       this.renderer.requestRender();

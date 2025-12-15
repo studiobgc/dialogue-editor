@@ -141,6 +141,13 @@ export class GraphRenderer {
     return this.nodeRenderer;
   }
 
+  /**
+   * Set character lookup for displaying speaker names instead of IDs
+   */
+  setCharacterLookup(lookup: (id: string) => { id: string; displayName: string; color: string } | undefined): void {
+    this.nodeRenderer.setCharacterLookup(lookup as Parameters<typeof this.nodeRenderer.setCharacterLookup>[0]);
+  }
+
   // ==================== SELECTION STATE ====================
 
   setSelectedNodes(nodeIds: Set<string>): void {

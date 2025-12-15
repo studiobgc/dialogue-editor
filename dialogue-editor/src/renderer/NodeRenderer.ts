@@ -3,9 +3,12 @@
  * Clean, flat design with solid color headers and clear typography
  */
 
-import { Node, Position } from '../types/graph';
+import { Node, Position, Character } from '../types/graph';
 import { NODE_CONFIGS } from '../core/NodeFactory';
 import { Viewport } from './Viewport';
+
+// Character lookup function type
+type CharacterLookup = (id: string) => Character | undefined;
 
 export interface NodeRenderStyle {
   backgroundColor: string;
@@ -47,9 +50,17 @@ const DEFAULT_STYLE: NodeRenderStyle = {
 export class NodeRenderer {
   private style: NodeRenderStyle;
   private connectedPorts: Set<string> = new Set();
+  private characterLookup: CharacterLookup = () => undefined;
 
   constructor(style?: Partial<NodeRenderStyle>) {
     this.style = { ...DEFAULT_STYLE, ...style };
+  }
+
+  /**
+   * Set the character lookup function for resolving speaker IDs to names
+   */
+  setCharacterLookup(lookup: CharacterLookup): void {
+    this.characterLookup = lookup;
   }
 
   /**
@@ -214,14 +225,19 @@ export class NodeRenderer {
       case 'dialogue':
       case 'dialogueFragment': {
         const data = node.data as { type: string; data: { speaker?: string; text: string } };
-        const speaker = data.data.speaker;
+        const speakerId = data.data.speaker;
         const text = data.data.text;
         
-        // Speaker name in accent color
-        if (speaker) {
-          ctx.fillStyle = '#569cd6'; // Blue like Articy
+        // Look up character to get display name and color
+        const character = speakerId ? this.characterLookup(speakerId) : undefined;
+        const speakerName = character?.displayName || speakerId;
+        const speakerColor = character?.color || '#569cd6';
+        
+        // Speaker name in character color
+        if (speakerName) {
+          ctx.fillStyle = speakerColor;
           ctx.font = `bold ${this.style.fontSize}px ${this.style.fontFamily}`;
-          ctx.fillText(speaker, tx, ty);
+          ctx.fillText(speakerName, tx, ty);
         }
         
         // Dialogue text
@@ -229,7 +245,7 @@ export class NodeRenderer {
           ctx.fillStyle = this.style.textColor;
           ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
           const lines = this.wrapText(ctx, text, maxW, 3);
-          const startY = speaker ? ty + lh : ty;
+          const startY = speakerName ? ty + lh : ty;
           lines.forEach((line, i) => {
             ctx.fillText(line, tx, startY + lh * i);
           });
@@ -237,7 +253,7 @@ export class NodeRenderer {
           // Placeholder
           ctx.fillStyle = this.style.textSecondary;
           ctx.font = `italic ${this.style.fontSize}px ${this.style.fontFamily}`;
-          ctx.fillText('Double-click to edit...', tx, speaker ? ty + lh : ty);
+          ctx.fillText('Double-click to edit...', tx, speakerName ? ty + lh : ty);
         }
         break;
       }
