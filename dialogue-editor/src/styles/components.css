@@ -43,11 +43,23 @@
   margin: var(--space-1) 0;
 }
 
+.context-menu-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
 .context-menu-shortcut {
   margin-left: auto;
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   font-family: var(--font-mono);
+}
+
+.context-menu-arrow {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
 /* ========================================
