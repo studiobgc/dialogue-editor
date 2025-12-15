@@ -1,20 +1,19 @@
 /**
- * PlaytestMode - Immersive Text Adventure Experience
+ * PlaytestMode - Illustrated Text Adventure
  * 
- * Inspired by Zeekerss's "Welcome to the Dark Place":
- * - Atmospheric, minimal visuals
- * - Text that draws you into rabbit holes
- * - You tell yourself the story
+ * Split-view design:
+ * - Left: Isometric hand-drawn illustrations
+ * - Right: Clean typography with dialogue
  * 
- * Juice effects:
- * - Typewriter text reveal
- * - Screen shake on drama
- * - Atmospheric color shifts
- * - Smooth transitions
+ * Design matches Elaine May's writing:
+ * - Understated, observational
+ * - Illustrations are childlike but sophisticated
+ * - Fast animations, stable layout
  */
 
 import { GraphModel } from '../core/GraphModel';
-import { Node, Connection, Character } from '../types/graph';
+import { Node, Connection } from '../types/graph';
+import { getIllustrationForScene, getLocationLabel } from './illustrations';
 
 interface PlaytestState {
   variables: Record<string, Record<string, boolean | number | string>>;
@@ -31,6 +30,7 @@ export class PlaytestMode {
   private typewriterTimeout: number | null = null;
   private isTyping = false;
   private debugVisible = false;
+  private currentLocation = 'THE WEISSMAN APARTMENT';
 
   constructor(model: GraphModel, onNodeFocus?: (nodeId: string) => void) {
     this.model = model;
@@ -50,7 +50,6 @@ export class PlaytestMode {
   show(startNodeId?: string): void {
     this.state = this.createInitialState();
     
-    // Find start node
     if (startNodeId) {
       this.currentNodeId = startNodeId;
     } else {
@@ -63,13 +62,9 @@ export class PlaytestMode {
 
     this.renderOverlay();
     
-    // Fade in
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.overlay?.classList.add('visible');
-        // Start after fade in
-        setTimeout(() => this.advance(), 400);
-      });
+      this.overlay?.classList.add('visible');
+      setTimeout(() => this.advance(), 150);
     });
   }
 
@@ -85,8 +80,10 @@ export class PlaytestMode {
       setTimeout(() => {
         this.overlay?.remove();
         this.overlay = null;
-      }, 800);
+      }, 200);
     }
+    
+    document.removeEventListener('keydown', this.handleKeyDown);
   }
 
   private renderOverlay(): void {
@@ -97,21 +94,27 @@ export class PlaytestMode {
     this.overlay.setAttribute('data-mood', 'neutral');
     
     this.overlay.innerHTML = `
-      <div class="playtest-controls">
-        <button class="playtest-control-btn" id="pt-restart" title="Restart">↺</button>
-        <button class="playtest-control-btn" id="pt-back" title="Go back">←</button>
-        <button class="playtest-control-btn close" id="pt-close" title="Exit">×</button>
+      <div class="playtest-illustration" id="pt-illustration">
+        <div class="playtest-location" id="pt-location">${this.currentLocation}</div>
       </div>
       
-      <div class="playtest-content">
+      <div class="playtest-text-panel">
         <div class="playtest-scene" id="pt-scene"></div>
       </div>
       
-      <button class="playtest-debug-toggle" id="pt-debug-toggle">vars</button>
-      <div class="playtest-debug" id="pt-debug"></div>
-      <div class="playtest-node-ref" id="pt-node-ref"></div>
+      <div class="playtest-controls">
+        <button class="playtest-control-btn" id="pt-restart" title="Restart">↺</button>
+        <button class="playtest-control-btn" id="pt-back" title="Go back">←</button>
+        <button class="playtest-control-btn close" id="pt-close" title="Exit (Esc)">×</button>
+      </div>
       
-      <div class="playtest-ambient-glow" id="pt-glow"></div>
+      <div class="playtest-footer">
+        <div>
+          <button class="playtest-debug-toggle" id="pt-debug-toggle">variables</button>
+          <div class="playtest-debug" id="pt-debug"></div>
+        </div>
+        <div class="playtest-node-ref" id="pt-node-ref"></div>
+      </div>
     `;
 
     document.body.appendChild(this.overlay);
@@ -130,7 +133,6 @@ export class PlaytestMode {
       this.overlay?.querySelector('#pt-debug')?.classList.toggle('visible', this.debugVisible);
     });
 
-    // Keyboard shortcuts
     document.addEventListener('keydown', this.handleKeyDown);
   }
 
@@ -140,7 +142,7 @@ export class PlaytestMode {
     if (e.key === 'Escape') {
       this.hide();
     } else if (e.key === ' ' && !this.isTyping) {
-      // Space to continue (if there's a continue button)
+      e.preventDefault();
       const continueBtn = this.overlay.querySelector('.playtest-continue') as HTMLButtonElement;
       continueBtn?.click();
     }
@@ -155,18 +157,13 @@ export class PlaytestMode {
       return;
     }
 
-    // Mark visited
     this.state.visitedNodes.add(this.currentNodeId);
     this.state.history.push(this.currentNodeId);
-
-    // Focus in editor
     this.onNodeFocus?.(this.currentNodeId);
 
-    // Update node reference
     const nodeRef = this.overlay.querySelector('#pt-node-ref');
-    if (nodeRef) nodeRef.textContent = node.id.substring(0, 8);
+    if (nodeRef) nodeRef.textContent = node.id;
 
-    // Handle by type
     switch (node.nodeType) {
       case 'dialogue':
       case 'dialogueFragment':
@@ -194,33 +191,82 @@ export class PlaytestMode {
 
   private showDialogue(node: Node): void {
     const scene = this.overlay?.querySelector('#pt-scene');
-    if (!scene) return;
+    const illustrationPanel = this.overlay?.querySelector('#pt-illustration');
+    if (!scene || !illustrationPanel) return;
 
     const data = node.data as { type: string; data: { speaker?: string; text?: string; stageDirections?: string } };
     const characters = this.model.getCharacters();
     const speaker = characters.find(c => c.id === data.data.speaker);
-    const speakerName = speaker?.displayName || 'Narrator';
-    const speakerColor = speaker?.color || '#888';
+    const speakerName = speaker?.displayName || 'NARRATOR';
+    const speakerColor = speaker?.color || '#6a6560';
     const text = data.data.text || '';
     const stageDirections = data.data.stageDirections;
 
-    // Set mood based on content
+    // Update illustration based on scene content
+    this.updateIllustration(text, stageDirections);
+    
+    // Set mood
     this.setMoodFromText(text);
 
-    // Build scene HTML
+    // Render scene with stable layout
     scene.innerHTML = `
-      ${stageDirections ? `<div class="playtest-stage-directions">${stageDirections}</div>` : ''}
+      ${stageDirections ? `<div class="playtest-stage-directions">${this.formatStageDirections(stageDirections)}</div>` : ''}
       <div class="playtest-speaker">
         <span class="playtest-speaker-name" style="--speaker-color: ${speakerColor}">${speakerName}</span>
       </div>
       <div class="playtest-dialogue" id="pt-dialogue"></div>
-      <div class="playtest-choices" id="pt-choices" style="display: none;"></div>
+      <div class="playtest-choices" id="pt-choices" style="opacity: 0;"></div>
     `;
 
-    // Typewriter effect
-    this.typeText(text, () => {
+    scene.classList.add('playtest-scene-enter');
+    setTimeout(() => scene.classList.remove('playtest-scene-enter'), 150);
+
+    // Fast typewriter (or instant for narration/brackets)
+    if (text.startsWith('[') && text.endsWith(']')) {
+      // Narration - show instantly
+      const dialogueEl = this.overlay?.querySelector('#pt-dialogue');
+      if (dialogueEl) {
+        dialogueEl.innerHTML = this.formatText(text);
+      }
       this.showDialogueChoices(node);
-    });
+    } else {
+      this.typeText(text, () => {
+        this.showDialogueChoices(node);
+      });
+    }
+  }
+
+  private updateIllustration(text: string, stageDirections?: string): void {
+    const illustrationPanel = this.overlay?.querySelector('#pt-illustration');
+    const locationLabel = this.overlay?.querySelector('#pt-location');
+    if (!illustrationPanel) return;
+
+    const combinedText = text + (stageDirections || '');
+    const illustration = getIllustrationForScene(this.currentNodeId || '', combinedText);
+    const location = getLocationLabel(combinedText);
+    
+    // Only update if illustration changed
+    const currentSvg = illustrationPanel.querySelector('svg');
+    if (!currentSvg || this.currentLocation !== location) {
+      this.currentLocation = location;
+      
+      // Insert illustration
+      const existingSvg = illustrationPanel.querySelector('svg');
+      if (existingSvg) existingSvg.remove();
+      
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = illustration;
+      const svg = wrapper.querySelector('svg');
+      if (svg) {
+        svg.classList.add('playtest-illustration-enter');
+        illustrationPanel.appendChild(svg);
+      }
+      
+      // Update location label
+      if (locationLabel) {
+        locationLabel.textContent = location;
+      }
+    }
   }
 
   private typeText(text: string, onComplete: () => void): void {
@@ -228,34 +274,33 @@ export class PlaytestMode {
     if (!dialogueEl) return;
 
     this.isTyping = true;
-    dialogueEl.classList.add('typing');
     
     let index = 0;
     const chars = text.split('');
-    const baseSpeed = 30; // ms per character
+    const baseSpeed = 18; // Faster base speed
     
     const type = () => {
       if (index < chars.length) {
         const char = chars[index];
         dialogueEl.innerHTML = this.formatText(text.substring(0, index + 1)) + '<span class="playtest-cursor"></span>';
         
-        // Variable speed - pause on punctuation
+        // Variable speed - shorter pauses
         let delay = baseSpeed;
-        if (char === '.' || char === '!' || char === '?') delay = 300;
-        else if (char === ',') delay = 150;
-        else if (char === ':' || char === ';') delay = 200;
+        if (char === '.' || char === '!' || char === '?') delay = 150;
+        else if (char === ',') delay = 80;
+        else if (char === '—') delay = 100;
+        else if (char === ':' || char === ';') delay = 100;
         
         index++;
         this.typewriterTimeout = window.setTimeout(type, delay);
       } else {
-        // Done typing
         dialogueEl.innerHTML = this.formatText(text);
         this.isTyping = false;
         onComplete();
       }
     };
 
-    // Allow skipping by clicking
+    // Click to skip
     const skipHandler = () => {
       if (this.isTyping && this.typewriterTimeout) {
         clearTimeout(this.typewriterTimeout);
@@ -277,30 +322,27 @@ export class PlaytestMode {
     const connections = this.model.getConnections().filter(c => c.fromNodeId === node.id);
 
     if (connections.length === 0) {
-      // End of conversation
       choicesEl.innerHTML = `
         <div class="playtest-end">
           <div class="playtest-end-symbol">· · ·</div>
-          <div class="playtest-end-text">End of conversation</div>
+          <div class="playtest-end-text">End</div>
         </div>
         <button class="playtest-continue" id="pt-restart-end">Begin again</button>
       `;
-      choicesEl.style.display = 'flex';
+      choicesEl.style.opacity = '1';
       
       choicesEl.querySelector('#pt-restart-end')?.addEventListener('click', () => {
         this.state = this.createInitialState();
         this.show();
       });
     } else if (connections.length === 1) {
-      // Single path - show continue
       choicesEl.innerHTML = `<button class="playtest-continue" id="pt-continue">Continue</button>`;
-      choicesEl.style.display = 'flex';
+      choicesEl.style.opacity = '1';
       
       choicesEl.querySelector('#pt-continue')?.addEventListener('click', () => {
         this.transitionTo(connections[0].toNodeId);
       });
     } else {
-      // Multiple choices
       this.renderChoices(connections);
     }
   }
@@ -326,13 +368,14 @@ export class PlaytestMode {
       const targetNode = this.model.getNode(conn.toNodeId);
       let label = conn.label || `Option ${i + 1}`;
       
-      // Try to get better label
       if (!conn.label && targetNode) {
         const data = targetNode.data as { type: string; data: { menuText?: string; text?: string } };
         if (data.data.menuText) {
           label = data.data.menuText;
         } else if (data.data.text) {
-          label = data.data.text.substring(0, 60) + (data.data.text.length > 60 ? '...' : '');
+          // Truncate long text
+          const fullText = data.data.text;
+          label = fullText.length > 50 ? fullText.substring(0, 50) + '…' : fullText;
         }
       }
 
@@ -346,9 +389,8 @@ export class PlaytestMode {
     }).join('');
 
     choicesEl.innerHTML = choicesHtml;
-    choicesEl.style.display = 'flex';
+    choicesEl.style.opacity = '1';
 
-    // Add click handlers
     choicesEl.querySelectorAll('.playtest-choice').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const target = (e.currentTarget as HTMLElement).dataset.target;
@@ -360,36 +402,27 @@ export class PlaytestMode {
   }
 
   private transitionTo(nodeId: string): void {
-    const scene = this.overlay?.querySelector('#pt-scene');
-    if (scene) {
-      scene.classList.add('playtest-scene-transition');
-      setTimeout(() => {
-        this.currentNodeId = nodeId;
-        this.advance();
-        scene.classList.remove('playtest-scene-transition');
-      }, 300);
-    } else {
-      this.currentNodeId = nodeId;
-      this.advance();
-    }
+    this.currentNodeId = nodeId;
+    this.advance();
   }
 
   private evaluateCondition(node: Node): void {
     const data = node.data as { type: string; data: { expression?: string } };
     const connections = this.model.getConnections().filter(c => c.fromNodeId === node.id);
     
-    // Simple evaluation - in real implementation, parse the expression
     let result = false;
     try {
       const expr = data.data.expression || 'true';
-      // Very basic - just check if variable exists and is truthy
-      // This should be replaced with proper expression parsing
-      result = Boolean(expr);
+      // Simple variable evaluation
+      const evalExpr = expr.replace(/(\w+)\.(\w+)/g, (_, ns, key) => {
+        const val = this.state.variables[ns]?.[key];
+        return typeof val === 'string' ? `"${val}"` : String(val ?? 0);
+      });
+      result = Boolean(eval(evalExpr));
     } catch {
       result = false;
     }
 
-    // Find true/false paths
     const truePath = connections.find(c => c.fromPortIndex === 0);
     const falsePath = connections.find(c => c.fromPortIndex === 1);
 
@@ -397,21 +430,49 @@ export class PlaytestMode {
     if (nextNode) {
       this.currentNodeId = nextNode.toNodeId;
       this.advance();
+    } else if (connections.length > 0) {
+      this.currentNodeId = connections[0].toNodeId;
+      this.advance();
     } else {
       this.showEnd();
     }
   }
 
   private executeInstruction(node: Node): void {
-    // Flash effect for instruction execution
-    this.shake();
+    const data = node.data as { type: string; data: { expression?: string } };
+    
+    try {
+      const expr = data.data.expression || '';
+      // Parse simple assignments like "Game.tension = Game.tension + 1"
+      const assignments = expr.split(';').map(s => s.trim()).filter(Boolean);
+      
+      for (const assignment of assignments) {
+        const match = assignment.match(/(\w+)\.(\w+)\s*=\s*(.+)/);
+        if (match) {
+          const [, ns, key, valueExpr] = match;
+          
+          // Evaluate the right side
+          const evalExpr = valueExpr.replace(/(\w+)\.(\w+)/g, (_, vns, vkey) => {
+            const val = this.state.variables[vns]?.[vkey];
+            return typeof val === 'string' ? `"${val}"` : String(val ?? 0);
+          });
+          
+          const value = eval(evalExpr);
+          
+          if (!this.state.variables[ns]) {
+            this.state.variables[ns] = {};
+          }
+          this.state.variables[ns][key] = value;
+        }
+      }
+    } catch (e) {
+      console.warn('Instruction evaluation failed:', e);
+    }
 
     const connections = this.model.getConnections().filter(c => c.fromNodeId === node.id);
     if (connections.length > 0) {
-      setTimeout(() => {
-        this.currentNodeId = connections[0].toNodeId;
-        this.advance();
-      }, 200);
+      this.currentNodeId = connections[0].toNodeId;
+      this.advance();
     } else {
       this.showEnd();
     }
@@ -431,8 +492,8 @@ export class PlaytestMode {
 
   private goBack(): void {
     if (this.state.history.length > 1) {
-      this.state.history.pop(); // Remove current
-      const previousId = this.state.history.pop(); // Get previous (will be re-added)
+      this.state.history.pop();
+      const previousId = this.state.history.pop();
       if (previousId) {
         this.currentNodeId = previousId;
         this.advance();
@@ -447,9 +508,9 @@ export class PlaytestMode {
     scene.innerHTML = `
       <div class="playtest-end">
         <div class="playtest-end-symbol">⁂</div>
-        <div class="playtest-end-text">The conversation has ended</div>
+        <div class="playtest-end-text">The evening continues elsewhere</div>
       </div>
-      <div class="playtest-choices">
+      <div class="playtest-choices" style="opacity: 1;">
         <button class="playtest-continue" id="pt-restart-end">Begin again</button>
       </div>
     `;
@@ -476,38 +537,37 @@ export class PlaytestMode {
       });
     });
 
-    debug.innerHTML = vars.length > 0 ? vars.join('') : '<span style="color: #444">No variables</span>';
+    debug.innerHTML = vars.length > 0 ? vars.join('') : '<span style="opacity: 0.5">No variables set</span>';
   }
 
   private formatText(text: string): string {
-    // Convert *text* to emphasis, **text** to strong
     return text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
   }
 
+  private formatStageDirections(text: string): string {
+    // Remove brackets if present
+    return text.replace(/^\[|\]$/g, '');
+  }
+
   private setMoodFromText(text: string): void {
     const lower = text.toLowerCase();
     let mood = 'neutral';
 
-    // Detect mood from keywords
-    if (lower.includes('dark') || lower.includes('shadow') || lower.includes('fear') || lower.includes('death')) {
+    if (lower.includes('tension') || lower.includes('crying') || lower.includes('crisis') || 
+        lower.includes('angry') || lower.includes('cold') || lower.includes('sharp')) {
       mood = 'tense';
-    } else if (lower.includes('strange') || lower.includes('dream') || lower.includes('mysterious')) {
+    } else if (lower.includes('strange') || lower.includes('radio') || lower.includes('door') ||
+               lower.includes('mysterious') || lower.includes('signal')) {
       mood = 'mysterious';
-    } else if (lower.includes('warm') || lower.includes('light') || lower.includes('smile') || lower.includes('laugh')) {
+    } else if (lower.includes('warm') || lower.includes('smile') || lower.includes('laugh') ||
+               lower.includes('good') || lower.includes('nice')) {
       mood = 'warm';
     }
 
     this.overlay?.setAttribute('data-mood', mood);
-  }
-
-  private shake(): void {
-    this.overlay?.classList.add('playtest-shake');
-    setTimeout(() => {
-      this.overlay?.classList.remove('playtest-shake');
-    }, 150);
   }
 
   destroy(): void {

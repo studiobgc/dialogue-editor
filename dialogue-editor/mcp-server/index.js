@@ -21,6 +21,8 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { WebSocketServer } from 'ws';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 // ============================================================
 // STATE
@@ -302,6 +304,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ['dialogues']
         }
+      },
+      {
+        name: 'load_project',
+        description: 'Load a dialogue project from a JSON file path. This replaces the current graph in the editor.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filePath: { type: 'string', description: 'Absolute path to the JSON file to load' }
+          },
+          required: ['filePath']
+        }
       }
     ]
   };
@@ -480,6 +493,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{ type: 'text', text: `Added ${args.dialogues.length} dialogue nodes` }]
         };
+      }
+
+      case 'load_project': {
+        try {
+          const filePath = resolve(args.filePath);
+          const fileContent = readFileSync(filePath, 'utf-8');
+          const projectData = JSON.parse(fileContent);
+          
+          await sendCommand({
+            type: 'load_project',
+            projectData
+          });
+          
+          return {
+            content: [{ type: 'text', text: `Loaded project from ${filePath}` }]
+          };
+        } catch (err) {
+          return {
+            content: [{ type: 'text', text: `Failed to load project: ${err.message}` }],
+            isError: true
+          };
+        }
       }
 
       default:
