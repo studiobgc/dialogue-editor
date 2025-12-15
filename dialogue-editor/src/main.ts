@@ -22,6 +22,7 @@ import { UnrealExporter } from './services/UnrealExporter';
 import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/BulkImporter';
 import { MCPBridge } from './services/MCPBridge';
 import { FlowPreview } from './ui/FlowPreview';
+import { PlaytestMode } from './ui/PlaytestMode';
 import { StatsPanel } from './ui/StatsPanel';
 
 class DialogueEditor {
@@ -42,6 +43,7 @@ class DialogueEditor {
   private floatingToolbar: FloatingToolbar;
   private mcpBridge: MCPBridge;
   private flowPreview: FlowPreview;
+  private playtestMode: PlaytestMode;
   private statsPanel: StatsPanel;
   private _isFirstLaunch: boolean = true;
 
@@ -139,9 +141,8 @@ class DialogueEditor {
       this.mcpBridge.sendState();
     });
 
-    // Initialize Flow Preview for playtesting
+    // Initialize Flow Preview for playtesting (legacy)
     this.flowPreview = new FlowPreview(this.model, (nodeId) => {
-      // Focus on node when stepping through preview
       const node = this.model.getNode(nodeId);
       if (node) {
         this.renderer.setSelectedNodes(new Set([nodeId]));
@@ -149,6 +150,15 @@ class DialogueEditor {
           -node.position.x + this.canvas.width / 4,
           -node.position.y + this.canvas.height / 4
         );
+        this.render();
+      }
+    });
+
+    // Initialize immersive Playtest Mode (Zeekerss-inspired)
+    this.playtestMode = new PlaytestMode(this.model, (nodeId) => {
+      const node = this.model.getNode(nodeId);
+      if (node) {
+        this.renderer.setSelectedNodes(new Set([nodeId]));
         this.render();
       }
     });
@@ -474,7 +484,7 @@ class DialogueEditor {
       id: 'preview',
       icon: '▶️',
       label: 'Playtest',
-      onClick: () => this.flowPreview.show()
+      onClick: () => this.playtestMode.show()
     });
 
     this.toolbar.addAction({
