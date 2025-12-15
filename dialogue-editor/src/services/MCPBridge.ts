@@ -8,18 +8,24 @@
 import { GraphModel } from '../core/GraphModel';
 import { NodeType, Position } from '../types/graph';
 
+export interface MCPBridgeCallbacks {
+  onStatusChange?: (connected: boolean) => void;
+  onCommandExecuted?: () => void;  // Called after any command - use for live reload
+  onAutoSave?: () => void;         // Called to trigger auto-save
+}
+
 export class MCPBridge {
   private model: GraphModel;
   private ws: WebSocket | null = null;
   private reconnectTimer: number | null = null;
-  private onStatusChange?: (connected: boolean) => void;
+  private callbacks: MCPBridgeCallbacks = {};
 
   constructor(model: GraphModel) {
     this.model = model;
   }
 
-  connect(onStatusChange?: (connected: boolean) => void): void {
-    this.onStatusChange = onStatusChange;
+  connect(callbacks?: MCPBridgeCallbacks): void {
+    this.callbacks = callbacks || {};
     this.attemptConnect();
   }
 
@@ -31,13 +37,13 @@ export class MCPBridge {
 
       this.ws.onopen = () => {
         console.log('[MCPBridge] Connected to MCP server');
-        this.onStatusChange?.(true);
+        this.callbacks.onStatusChange?.(true);
         this.sendState();
       };
 
       this.ws.onclose = () => {
         console.log('[MCPBridge] Disconnected from MCP server');
-        this.onStatusChange?.(false);
+        this.callbacks.onStatusChange?.(false);
         this.scheduleReconnect();
       };
 
@@ -124,6 +130,12 @@ export class MCPBridge {
 
       // Send updated state after command
       this.sendState();
+      
+      // Trigger live reload and auto-save callbacks
+      if (result.success) {
+        this.callbacks.onCommandExecuted?.();
+        this.callbacks.onAutoSave?.();
+      }
     }
   }
 

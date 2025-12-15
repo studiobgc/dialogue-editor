@@ -112,9 +112,20 @@ class DialogueEditor {
 
     // Initialize MCP Bridge for live AI editing through Windsurf
     this.mcpBridge = new MCPBridge(this.model);
-    this.mcpBridge.connect((connected) => {
-      if (connected) {
-        this.statusBar.setMessage('🤖 AI Connected', 2000);
+    this.mcpBridge.connect({
+      onStatusChange: (connected: boolean) => {
+        if (connected) {
+          this.statusBar.setMessage('🤖 AI Connected', 2000);
+        }
+      },
+      onCommandExecuted: () => {
+        // Live reload: re-render the canvas when AI makes changes
+        this.render();
+        this.statusBar.setMessage('✨ AI updated graph', 1500);
+      },
+      onAutoSave: () => {
+        // Auto-save when AI makes changes
+        this.autoSaveProject();
       }
     });
 
@@ -147,6 +158,23 @@ class DialogueEditor {
 
     // Load current project if exists
     this.loadCurrentProject();
+    
+    // Setup crash recovery: save before page unload
+    window.addEventListener('beforeunload', () => {
+      this.autoSaveProject();
+    });
+    
+    // Setup periodic auto-save every 30 seconds
+    setInterval(() => {
+      this.autoSaveProject();
+    }, 30000);
+    
+    // Also save when tab becomes hidden (user switches tabs/apps)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.autoSaveProject();
+      }
+    });
   }
 
   private loadCurrentProject(): void {
