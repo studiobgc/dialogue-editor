@@ -7,6 +7,18 @@
 
 import { GraphModel } from '../core/GraphModel';
 import { NodeType, Position } from '../types/graph';
+import { 
+  findNonOverlappingPosition, 
+  findPositionAfterNode, 
+  findBranchPosition,
+  NODE_WIDTH,
+  NODE_HEIGHT,
+  NODE_PADDING,
+  H_GAP,
+  V_GAP,
+  DEFAULT_START_POSITION,
+  DEFAULT_NEW_NODE_POSITION
+} from '../utils/LayoutUtils';
 
 export interface MCPBridgeCallbacks {
   onStatusChange?: (connected: boolean) => void;
@@ -112,13 +124,17 @@ export class MCPBridge {
 
   // Handle commands from MCP server
   private handleMessage(message: { type: string; requestId?: number; command?: MCPCommand }): void {
+    console.log('[MCPBridge] Received message:', message.type, message.command?.type);
+    
     if (message.type === 'get_state') {
       this.sendState();
       return;
     }
 
     if (message.type === 'command' && message.command) {
+      console.log('[MCPBridge] Executing command:', message.command.type);
       const result = this.executeCommand(message.command);
+      console.log('[MCPBridge] Command result:', result);
       
       if (message.requestId && this.ws) {
         this.ws.send(JSON.stringify({
@@ -179,7 +195,27 @@ export class MCPBridge {
 
         case 'add_node': {
           if (!cmd.nodeType) return { success: false, error: 'No nodeType provided' };
-          const position: Position = cmd.position || { x: 400, y: 200 };
+          
+          // Smart positioning using LayoutUtils
+          let position: Position;
+          const existingNodes = this.model.getGraph().nodes;
+          
+          if (cmd.connectFrom) {
+            // Position relative to source node
+            const sourceNode = this.model.getNode(cmd.connectFrom);
+            if (sourceNode) {
+              position = findPositionAfterNode(existingNodes, sourceNode);
+            } else {
+              position = cmd.position || findNonOverlappingPosition(existingNodes, DEFAULT_NEW_NODE_POSITION);
+            }
+          } else if (cmd.position) {
+            // Use provided position but ensure no overlap
+            position = findNonOverlappingPosition(existingNodes, cmd.position);
+          } else {
+            // Default position, avoid overlaps
+            position = findNonOverlappingPosition(existingNodes, DEFAULT_NEW_NODE_POSITION);
+          }
+          
           const newNode = this.model.addNode(cmd.nodeType, position);
 
           // Set node data
@@ -259,15 +295,22 @@ export class MCPBridge {
 
         case 'batch_add_dialogue': {
           let lastNodeId = cmd.startFromNodeId;
-          let yOffset = 0;
           const dialogues = cmd.dialogues || [];
 
           for (const dialogue of dialogues) {
-            const startNode = lastNodeId ? this.model.getNode(lastNodeId) : null;
-            const position: Position = {
-              x: (startNode?.position.x || 100) + 350,
-              y: (startNode?.position.y || 100) + yOffset
-            };
+            const existingNodes = this.model.getGraph().nodes;
+            let position: Position;
+            
+            if (lastNodeId) {
+              const sourceNode = this.model.getNode(lastNodeId);
+              if (sourceNode) {
+                position = findPositionAfterNode(existingNodes, sourceNode);
+              } else {
+                position = findNonOverlappingPosition(existingNodes, DEFAULT_NEW_NODE_POSITION);
+              }
+            } else {
+              position = findNonOverlappingPosition(existingNodes, DEFAULT_START_POSITION);
+            }
 
             const newNode = this.model.addNode('dialogueFragment', position);
             
@@ -289,9 +332,18 @@ export class MCPBridge {
             }
 
             lastNodeId = newNode.id;
-            yOffset += 150;
           }
 
+          return { success: true };
+        }
+
+        case 'load_project': {
+          if (!cmd.projectData) return { success: false, error: 'No projectData provided' };
+          
+          // Convert the JSON format to internal graph format
+          const graph = this.convertProjectToGraph(cmd.projectData);
+          this.model.loadGraph(graph);
+          
           return { success: true };
         }
 
@@ -302,6 +354,247 @@ export class MCPBridge {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
+
+  /**
+   * Convert JSON project format to internal DialogueGraph format
+   * Uses the same layout algorithm as native node creation for consistency
+   */
+  private convertProjectToGraph(projectData: ProjectData): import('../types/graph').DialogueGraph {
+    const nodes: import('../types/graph').Node[] = [];
+    const connections: import('../types/graph').Connection[] = [];
+    const now = Date.now();
+    
+    // Uses imported constants from LayoutUtils (single source of truth)
+    // NODE_WIDTH, NODE_HEIGHT, NODE_PADDING, H_GAP, V_GAP, DEFAULT_START_POSITION
+    
+    // Convert characters with all required fields
+    const characters: import('../types/graph').Character[] = (projectData.characters || []).map(c => ({
+      id: c.id,
+      articyId: { low: 0, high: 0 },
+      technicalName: c.id,
+      displayName: c.name,
+      color: c.color
+    }));
+
+    // Process all conversations - use native layout algorithm
+    for (const act of projectData.acts || []) {
+      for (const scene of act.scenes || []) {
+        for (const conv of scene.conversations || []) {
+          const convNodes = conv.nodes || [];
+          if (convNodes.length === 0) continue;
+
+          // Build parent->children adjacency map
+          const childrenMap = new Map<string, string[]>();
+          const hasParent = new Set<string>();
+          
+          for (const node of convNodes) {
+            const children: string[] = [];
+            if (node.outputs) {
+              for (const output of node.outputs) {
+                if (output.targetNodeId) {
+                  children.push(output.targetNodeId);
+                  hasParent.add(output.targetNodeId);
+                }
+              }
+            }
+            childrenMap.set(node.id, children);
+          }
+
+          // Find root (no incoming edges)
+          const roots = convNodes.filter(n => !hasParent.has(n.id));
+          const rootId = roots[0]?.id || convNodes[0]?.id;
+          if (!rootId) continue;
+
+          // BFS layout - same algorithm as autoLayoutFromNode
+          const nodePositions = new Map<string, Position>();
+          const visited = new Set<string>();
+          const queue: { nodeId: string; depth: number; branchIndex: number }[] = [
+            { nodeId: rootId, depth: 0, branchIndex: 0 }
+          ];
+          const depthCounts: number[] = [];
+
+          while (queue.length > 0) {
+            const { nodeId, depth, branchIndex } = queue.shift()!;
+            
+            if (visited.has(nodeId)) continue;
+            visited.add(nodeId);
+
+            // Position: depth controls X, branchIndex controls Y
+            const x = DEFAULT_START_POSITION.x + depth * H_GAP;
+            const y = DEFAULT_START_POSITION.y + branchIndex * V_GAP;
+            nodePositions.set(nodeId, { x, y });
+
+            // Queue children with proper branch indexing
+            const children = childrenMap.get(nodeId) || [];
+            if (!depthCounts[depth + 1]) depthCounts[depth + 1] = 0;
+            
+            for (const childId of children) {
+              if (!visited.has(childId)) {
+                queue.push({
+                  nodeId: childId,
+                  depth: depth + 1,
+                  branchIndex: depthCounts[depth + 1]++
+                });
+              }
+            }
+          }
+
+          // Handle orphans (unreachable from root) - place them below the tree
+          const orphans = convNodes.filter(n => !visited.has(n.id));
+          let orphanY = DEFAULT_START_POSITION.y + (depthCounts.reduce((a, b) => Math.max(a, b), 0) + 2) * V_GAP;
+          for (const orphan of orphans) {
+            nodePositions.set(orphan.id, { x: DEFAULT_START_POSITION.x, y: orphanY });
+            orphanY += V_GAP;
+          }
+
+          // Create graph nodes with calculated positions
+          for (const node of convNodes) {
+            let nodeType: NodeType = 'dialogueFragment';
+            if (node.type === 'hub') nodeType = 'hub';
+            else if (node.type === 'condition') nodeType = 'condition';
+            else if (node.type === 'instruction') nodeType = 'instruction';
+
+            const pos = nodePositions.get(node.id) || DEFAULT_START_POSITION;
+
+            const graphNode: import('../types/graph').Node = {
+              id: node.id,
+              technicalName: node.id,
+              nodeType,
+              position: pos,
+              size: { width: NODE_WIDTH, height: NODE_HEIGHT },
+              inputPorts: [{ id: `${node.id}_in_0`, nodeId: node.id, type: 'input', index: 0 }],
+              outputPorts: (node.outputs || [{ targetNodeId: undefined }]).map((_, idx) => ({
+                id: `${node.id}_out_${idx}`,
+                nodeId: node.id,
+                type: 'output' as const,
+                index: idx
+              })),
+              data: this.buildNodeData(node, nodeType)
+            };
+
+            nodes.push(graphNode);
+
+            // Create connections
+            if (node.outputs) {
+              node.outputs.forEach((output, idx) => {
+                if (output.targetNodeId) {
+                  connections.push({
+                    id: `conn_${node.id}_${idx}`,
+                    fromNodeId: node.id,
+                    fromPortIndex: idx,
+                    toNodeId: output.targetNodeId,
+                    toPortIndex: 0,
+                    connectionType: 'flow',
+                    label: output.label
+                  });
+                }
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Convert variables to VariableNamespace format
+    const variables: import('../types/graph').VariableNamespace[] = [];
+    if (projectData.variables) {
+      for (const [nsName, nsVars] of Object.entries(projectData.variables)) {
+        const vars: import('../types/graph').Variable[] = [];
+        if (typeof nsVars === 'object' && nsVars !== null) {
+          for (const [varName, value] of Object.entries(nsVars as Record<string, unknown>)) {
+            vars.push({
+              id: `${nsName}_${varName}`,
+              namespace: nsName,
+              name: varName,
+              type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
+              defaultValue: value as string | number | boolean
+            });
+          }
+        }
+        variables.push({ name: nsName, variables: vars });
+      }
+    }
+
+    return {
+      id: 'graph_' + now,
+      name: projectData.metadata?.title || 'Imported Project',
+      technicalName: 'imported_project',
+      nodes,
+      connections,
+      characters,
+      variables,
+      createdAt: now,
+      modifiedAt: now
+    };
+  }
+
+  private buildNodeData(node: ProjectNode, nodeType: NodeType): import('../types/graph').NodeData {
+    if (nodeType === 'dialogueFragment') {
+      return {
+        type: 'dialogueFragment',
+        data: {
+          speaker: node.speaker || '',
+          text: node.text || '',
+          menuText: node.menuText || '',
+          stageDirections: node.stageDirections || '',
+          autoTransition: false
+        }
+      };
+    } else if (nodeType === 'condition') {
+      return {
+        type: 'condition',
+        data: {
+          script: {
+            expression: node.condition || '',
+            isCondition: true
+          }
+        }
+      };
+    } else if (nodeType === 'instruction') {
+      return {
+        type: 'instruction',
+        data: {
+          script: {
+            expression: node.instruction || '',
+            isCondition: false
+          }
+        }
+      };
+    } else if (nodeType === 'hub') {
+      return {
+        type: 'hub',
+        data: {}
+      };
+    }
+    // Default fallback for other types
+    return { type: 'hub', data: {} };
+  }
+}
+
+// Project JSON format types
+interface ProjectData {
+  metadata?: { title?: string };
+  characters?: Array<{ id: string; name: string; color: string; description?: string }>;
+  variables?: Record<string, unknown>;
+  acts?: Array<{
+    scenes?: Array<{
+      conversations?: Array<{
+        nodes?: ProjectNode[];
+      }>;
+    }>;
+  }>;
+}
+
+interface ProjectNode {
+  id: string;
+  type: string;
+  speaker?: string;
+  text?: string;
+  menuText?: string;
+  stageDirections?: string;
+  condition?: string;
+  instruction?: string;
+  outputs?: Array<{ targetNodeId?: string; label?: string }>;
 }
 
 // Command types from MCP server
@@ -310,6 +603,7 @@ interface MCPCommand {
   nodeId?: string;
   nodeType?: NodeType;
   position?: Position;
+  projectData?: ProjectData;
   data?: {
     speaker?: string;
     text?: string;

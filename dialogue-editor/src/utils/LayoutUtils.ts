@@ -6,10 +6,21 @@
 
 import { Node, Position } from '../types/graph';
 
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 80;
-const NODE_PADDING = 40; // Min space between nodes
-const GRID_SIZE = 20;
+// ============================================================
+// LAYOUT CONSTANTS - Single source of truth for the entire app
+// ============================================================
+export const NODE_WIDTH = 200;
+export const NODE_HEIGHT = 80;
+export const NODE_PADDING = 40;
+export const GRID_SIZE = 20;
+
+// Computed layout gaps
+export const H_GAP = NODE_WIDTH + NODE_PADDING * 3;  // Horizontal gap between depth levels
+export const V_GAP = NODE_HEIGHT + NODE_PADDING;     // Vertical gap between siblings
+
+// Default starting position for new graphs
+export const DEFAULT_START_POSITION: Position = { x: 100, y: 200 };
+export const DEFAULT_NEW_NODE_POSITION: Position = { x: 400, y: 200 };
 
 /**
  * Find a non-overlapping position for a new node

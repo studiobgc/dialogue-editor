@@ -23,6 +23,7 @@ import {
 import { WebSocketServer } from 'ws';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { createServer } from 'http';
 
 // ============================================================
 // STATE
@@ -82,6 +83,59 @@ wss.on('connection', (ws) => {
 });
 
 console.error('[MCP] WebSocket server listening on port 9999');
+
+// ============================================================
+// HTTP SERVER (for triggering commands externally)
+// ============================================================
+
+const httpServer = createServer(async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/load-project') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { filePath } = JSON.parse(body);
+        const fullPath = resolve(filePath);
+        const fileContent = readFileSync(fullPath, 'utf-8');
+        const projectData = JSON.parse(fileContent);
+        
+        console.error(`[MCP] Loading project from ${fullPath} (${projectData.acts?.[0]?.scenes?.[0]?.conversations?.[0]?.nodes?.length || 0} nodes in first conv)`);
+        
+        const result = await sendCommand({
+          type: 'load_project',
+          projectData
+        });
+        
+        console.error('[MCP] Load project result:', result);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, result }));
+      } catch (err) {
+        console.error('[MCP] Load project error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  res.writeHead(404);
+  res.end('Not found');
+});
+
+httpServer.listen(9998, () => {
+  console.error('[MCP] HTTP server listening on port 9998');
+});
 
 // ============================================================
 // SEND COMMAND TO EDITOR

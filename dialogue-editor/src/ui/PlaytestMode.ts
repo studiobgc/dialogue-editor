@@ -2,18 +2,19 @@
  * PlaytestMode - Illustrated Text Adventure
  * 
  * Split-view design:
- * - Left: Isometric hand-drawn illustrations
+ * - Left: Canvas-rendered scene illustrations
  * - Right: Clean typography with dialogue
  * 
- * Design matches Elaine May's writing:
- * - Understated, observational
- * - Illustrations are childlike but sophisticated
- * - Fast animations, stable layout
+ * Design principles:
+ * - Utilitarian, not fancy
+ * - Fast Canvas rendering
+ * - Accessible colors
+ * - Stable layout
  */
 
 import { GraphModel } from '../core/GraphModel';
 import { Node, Connection } from '../types/graph';
-import { getIllustrationForScene, getLocationLabel } from './illustrations';
+import { SceneRenderer } from './SceneRenderer';
 
 interface PlaytestState {
   variables: Record<string, Record<string, boolean | number | string>>;
@@ -30,12 +31,14 @@ export class PlaytestMode {
   private typewriterTimeout: number | null = null;
   private isTyping = false;
   private debugVisible = false;
-  private currentLocation = 'THE WEISSMAN APARTMENT';
+  private currentLocation = 'THE APARTMENT';
+  private sceneRenderer: SceneRenderer;
 
   constructor(model: GraphModel, onNodeFocus?: (nodeId: string) => void) {
     this.model = model;
     this.onNodeFocus = onNodeFocus;
     this.state = this.createInitialState();
+    this.sceneRenderer = new SceneRenderer();
   }
 
   private createInitialState(): PlaytestState {
@@ -203,7 +206,7 @@ export class PlaytestMode {
     const stageDirections = data.data.stageDirections;
 
     // Update illustration based on scene content
-    this.updateIllustration(text, stageDirections);
+    this.updateIllustration(text, data.data.speaker, stageDirections);
     
     // Set mood
     this.setMoodFromText(text);
@@ -236,36 +239,25 @@ export class PlaytestMode {
     }
   }
 
-  private updateIllustration(text: string, stageDirections?: string): void {
+  private updateIllustration(text: string, speakerId?: string, stageDirections?: string): void {
     const illustrationPanel = this.overlay?.querySelector('#pt-illustration');
-    const locationLabel = this.overlay?.querySelector('#pt-location');
     if (!illustrationPanel) return;
 
     const combinedText = text + (stageDirections || '');
-    const illustration = getIllustrationForScene(this.currentNodeId || '', combinedText);
-    const location = getLocationLabel(combinedText);
+    const config = SceneRenderer.getSceneConfig(combinedText, speakerId);
     
-    // Only update if illustration changed
-    const currentSvg = illustrationPanel.querySelector('svg');
-    if (!currentSvg || this.currentLocation !== location) {
-      this.currentLocation = location;
+    // Only update if location changed
+    if (this.currentLocation !== config.location) {
+      this.currentLocation = config.location;
       
-      // Insert illustration
-      const existingSvg = illustrationPanel.querySelector('svg');
-      if (existingSvg) existingSvg.remove();
+      // Remove old canvas
+      const existingCanvas = illustrationPanel.querySelector('canvas');
+      if (existingCanvas) existingCanvas.remove();
       
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = illustration;
-      const svg = wrapper.querySelector('svg');
-      if (svg) {
-        svg.classList.add('playtest-illustration-enter');
-        illustrationPanel.appendChild(svg);
-      }
-      
-      // Update location label
-      if (locationLabel) {
-        locationLabel.textContent = location;
-      }
+      // Render new scene
+      const canvas = this.sceneRenderer.render(config);
+      canvas.classList.add('playtest-canvas');
+      illustrationPanel.appendChild(canvas);
     }
   }
 
