@@ -1,23 +1,94 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "metadata": {
     "title": "DINNER PARTY LABYRINTH . Act 1: The Arrival",
     "description": "A social survival game. You've been invited to dinner at the Weissmans'. The invitation said 7:30. You arrived at 7:47. This will be discussed.",
     "author": "Studio BGC",
     "createdAt": "2025-12-14T20:00:00-05:00"
   },
+  "skills": {
+    "_comment": "Disco Elysium-inspired inner voices that comment on social situations",
+    "social": {
+      "COMPOSURE": { "description": "Stay calm. Don't let them see you sweat.", "color": "#6B8E9F" },
+      "EMPATHY": { "description": "Feel what they feel. Sometimes too much.", "color": "#9B6B8E" },
+      "SUGGESTION": { "description": "Plant ideas. Guide conversations.", "color": "#8E9F6B" },
+      "DRAMA": { "description": "Recognize performance. Everyone's acting.", "color": "#9F6B8E" }
+    },
+    "interior": {
+      "VOLITION": { "description": "Your will to continue. To not run away.", "color": "#6B9F8E" },
+      "INLAND_EMPIRE": { "description": "The weird. The uncanny. The feeling something is wrong.", "color": "#8E6B9F" },
+      "LOGIC": { "description": "Make it make sense. Find the pattern.", "color": "#9F8E6B" },
+      "RHETORIC": { "description": "The right words. The winning argument.", "color": "#6B8E6B" }
+    }
+  },
   "characters": [
-    { "id": "char_p", "name": "YOU", "color": "#B8C0FF", "description": "You teach somewhere. You forget where when asked directly." },
-    { "id": "char_host", "name": "Mara", "color": "#E0E0E0", "description": "The hostess. Has opinions about butter temperatures. Will share them." },
-    { "id": "char_partner", "name": "Eli", "color": "#C7F9CC", "description": "Mara's husband. Restores vintage radios. Mentions it twice per conversation." },
-    { "id": "char_guest1", "name": "Dana", "color": "#FFD6A5", "description": "Works in something vague. Laughs before jokes end." }
+    {
+      "id": "char_p",
+      "name": "YOU",
+      "color": "#B8C0FF",
+      "description": "Art history professor. Divorced. The kind of tired that sleep doesn't fix.",
+      "philosophy": "People are unknowable, including yourself.",
+      "flaw": "You observe instead of participate. Safety in distance.",
+      "want": "To feel like you belong somewhere again."
+    },
+    {
+      "id": "char_host",
+      "name": "Mara",
+      "color": "#F5E6E0",
+      "description": "Former cellist. Gave it up at 32 when she realized she'd only ever be 'good.' Now she controls what she can.",
+      "philosophy": "If you can't control the big things, control the small ones perfectly.",
+      "flaw": "Her need for perfection makes everyone feel inadequate, including herself.",
+      "want": "To be seen as more than 'Eli's wife' or 'the hostess.'",
+      "obsession": "The 17-minute napkin folding video. Butter temperatures. The colander's spot.",
+      "secret": "She invited you because she remembered something about you that you've forgotten."
+    },
+    {
+      "id": "char_partner",
+      "name": "Eli",
+      "color": "#C7F9CC",
+      "description": "Insurance adjuster by day. Has 43 vintage radios in various states of repair. Married to Mara for 11 years (or 12, depending on how you count).",
+      "philosophy": "Things can be fixed if you're patient enough. People are just complicated things.",
+      "flaw": "He retreats into his hobbies when emotions get complicated.",
+      "want": "For Mara to look at him the way she looks at a perfectly set table.",
+      "obsession": "The radios. Specifically, one that picks up signals that shouldn't exist.",
+      "secret": "He knows about the break. He pretends not to remember it differently than she does."
+    },
+    {
+      "id": "char_guest1",
+      "name": "Dana",
+      "color": "#FFD6A5",
+      "description": "Mara's college friend. Works in 'consulting' (she's vague about what). Laughs at jokes before they end because she's already figured out where they're going.",
+      "philosophy": "People are exactly who they pretend not to be.",
+      "flaw": "She sees through everyone but won't let anyone see through her.",
+      "want": "To find someone who surprises her.",
+      "obsession": "Watching. She's always watching.",
+      "secret": "She's not here for Mara. She's here for you."
+    }
   ],
   "variables": {
     "Game": {
       "tension": 0,
       "suspicion": 0,
       "rapport_mara": 0,
+      "rapport_eli": 0,
+      "rapport_dana": 0,
       "roomMood": "arriving"
+    },
+    "Player": {
+      "composure": 2,
+      "empathy": 3,
+      "suggestion": 1,
+      "drama": 2,
+      "volition": 2,
+      "inland_empire": 3,
+      "logic": 2,
+      "rhetoric": 1
+    },
+    "Flags": {
+      "noticed_mara_eyes": false,
+      "heard_kitchen_conversation": false,
+      "saw_the_radios": false,
+      "dana_knows": false
     }
   },
   "acts": [
@@ -45,7 +116,7 @@
                   "id": "node_2",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Oh! You found it. Some people have trouble with the. well. You found it.",
+                  "text": "Oh! You found it. Some people have trouble with the address—the numbers skip on this block. But you found it.",
                   "stageDirections": "[Mara is holding a wooden spoon. She does not put it down.]",
                   "outputs": [{ "targetNodeId": "node_3" }]
                 },
@@ -53,7 +124,7 @@
                   "id": "node_3",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "The buzzer's been. I keep meaning to. anyway. Shoes are optional. Most people do. Take them off, I mean. But optional.",
+                  "text": "The buzzer's been acting up. Shoes are optional—most people take them off, but it's not a rule or anything.",
                   "stageDirections": "[Eli is wearing socks with individual toes.]",
                   "outputs": [{ "targetNodeId": "node_4" }]
                 },
@@ -69,7 +140,7 @@
                   "id": "node_5",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's so. I said. well. We'll open it. Eventually. Eli, take their. is that a jacket or a coat? I can never tell anymore.",
+                  "text": "That's so sweet. We'll definitely open it. Eli, can you take their—is that a jacket or a coat? I can never tell anymore.",
                   "outputs": [{ "targetNodeId": "node_6" }]
                 },
                 {
@@ -86,14 +157,14 @@
                   "id": "node_10",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "It's a jacket. I'm sorry I'm late. The 6 train was. there was a thing.",
+                  "text": "It's a jacket. I'm sorry I'm late—the 6 train was backed up at 51st.",
                   "outputs": [{ "targetNodeId": "node_11" }]
                 },
                 {
                   "id": "node_11",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "The 6? You took the 6? From. okay. That explains. I would have said take the. but you're here.",
+                  "text": "The 6? From where you live? That's... I would have said take the L, but you're here now.",
                   "outputs": [{ "targetNodeId": "node_12" }]
                 },
                 {
@@ -107,7 +178,7 @@
                   "id": "node_13",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I didn't make a. I just think if you live in a city. never mind. How are you? The teaching, you're still at. where is it again?",
+                  "text": "I didn't make a face. I just think if you live in a city with public transit... never mind. How are you? You're still teaching at—where is it again?",
                   "outputs": [{ "targetNodeId": "node_14" }]
                 },
                 {
@@ -127,7 +198,7 @@
                   "id": "node_21",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's. ha. Eli, did you hear. okay. We're doing that kind of evening.",
+                  "text": "That's... okay. We're doing that kind of evening. Eli, did you hear that?",
                   "outputs": [{ "targetNodeId": "node_22" }]
                 },
                 {
@@ -182,7 +253,7 @@
                   "id": "node_32",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "The human body is meant to. there's research. The Scandinavians. anyway. Different metabolisms.",
+                  "text": "The human body is meant to adapt to cold. There's research—the Scandinavians have done studies. We just have different metabolisms.",
                   "outputs": [{ "targetNodeId": "node_33" }]
                 },
                 {
@@ -209,21 +280,21 @@
                   "id": "node_41",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "This is. huh. What's in here? Rocks?",
+                  "text": "This is heavier than I expected. What's in here, rocks?",
                   "outputs": [{ "targetNodeId": "node_42" }]
                 },
                 {
                   "id": "node_42",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Eli. Don't. you can't just. I'm sorry. He does this. Comments on weight. Of things.",
+                  "text": "Eli, don't—I'm sorry, he does this. Comments on the weight of things.",
                   "outputs": [{ "targetNodeId": "node_43" }]
                 },
                 {
                   "id": "node_43",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "I'm just saying it's heavier than. that's an observation. Is that not allowed?",
+                  "text": "I'm just saying it's heavier than expected. That's an observation. Is that not allowed?",
                   "outputs": [{ "targetNodeId": "node_44" }]
                 },
                 {
@@ -236,7 +307,7 @@
                   "id": "node_60",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Wine? We have. Dana brought the Sancerre, which needs to. and there's the Grüner Eli found at that place, the one that closed—",
+                  "text": "Wine? Dana brought Sancerre, which needs to chill a bit more. And there's the Grüner Eli found at that place, the one that closed—",
                   "outputs": [{ "targetNodeId": "node_61" }]
                 },
                 {
@@ -273,7 +344,7 @@
                   "id": "node_71",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "See? Someone. I spent forty minutes in that store. Before they moved.",
+                  "text": "See? Someone appreciates it. I spent forty minutes in that store before they moved.",
                   "outputs": [{ "targetNodeId": "node_72" }]
                 },
                 {
@@ -287,7 +358,7 @@
                   "id": "node_73",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Wine doesn't. white wine doesn't need to. fine. Fine.",
+                  "text": "White wine doesn't need to breathe. But fine. Fine.",
                   "outputs": [{ "targetNodeId": "node_74" }]
                 },
                 {
@@ -314,14 +385,14 @@
                   "id": "node_77",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "No. I just. it came out wrong. Whatever's open.",
+                  "text": "No, I just—it came out wrong. Whatever's open is fine.",
                   "outputs": [{ "targetNodeId": "node_78" }]
                 },
                 {
                   "id": "node_78",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Nothing's open. That's why I asked. Eli, can you get the. the one from the thing.",
+                  "text": "Nothing's open yet. That's why I asked. Eli, can you get the one from the thing?",
                   "outputs": [{ "targetNodeId": "node_79" }]
                 },
                 {
@@ -341,7 +412,7 @@
                   "id": "node_81",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "We have. okay. Red, white, orange. yes, orange wine is a thing, Eli made a face—",
+                  "text": "We have red, white, and orange. Yes, orange wine is a thing—Eli made a face when I bought it.",
                   "outputs": [{ "targetNodeId": "node_82" }]
                 },
                 {
@@ -362,7 +433,7 @@
                   "id": "node_84",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's the. Eli, which one did you give Dana?",
+                  "text": "That's the—Eli, which one did you give Dana?",
                   "outputs": [{ "targetNodeId": "node_85" }]
                 },
                 {
@@ -382,7 +453,7 @@
                   "id": "node_90",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Why don't we. let's move to the. the food needs another. everything needs time.",
+                  "text": "Why don't we move to the dining room? The food needs another few minutes.",
                   "stageDirections": "[Mara's smile flickers.]",
                   "outputs": [{ "targetNodeId": "node_91" }]
                 },
@@ -390,14 +461,14 @@
                   "id": "node_91",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "So. How do you two know each other? Mara's been very. she hasn't said.",
+                  "text": "So, how do you two know each other? Mara's been evasive about it.",
                   "outputs": [{ "targetNodeId": "node_92" }]
                 },
                 {
                   "id": "node_92",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "We met at. do you want to tell it, or should I?",
+                  "text": "We met at—do you want to tell it, or should I?",
                   "outputs": [{ "targetNodeId": "node_93" }]
                 },
                 {
@@ -420,7 +491,7 @@
                   "id": "node_101",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Am I? Okay. We met at. god, what was it. A fundraiser? No. A funeral. Was it a funeral?",
+                  "text": "Am I? Okay. We met at—god, what was it? A fundraiser? No. A funeral. Was it a funeral?",
                   "outputs": [{ "targetNodeId": "node_102" }]
                 },
                 {
@@ -434,7 +505,7 @@
                   "id": "node_103",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "A bookstore! The one with the cat that bit people. I was buying. what was I buying?",
+                  "text": "A bookstore! The one with the cat that bit people. What was I buying?",
                   "outputs": [{ "targetNodeId": "node_104" }]
                 },
                 {
@@ -448,7 +519,7 @@
                   "id": "node_105",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I use more than. the point is, we met. We're here now.",
+                  "text": "I use more than three. But the point is, we met. We're here now.",
                   "outputs": [{ "targetNodeId": "node_106" }]
                 },
                 {
@@ -461,7 +532,7 @@
                   "id": "node_110",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "We met through mutual. it's complicated. Overlapping circles.",
+                  "text": "We met through mutual friends. It's complicated. Overlapping circles.",
                   "outputs": [{ "targetNodeId": "node_111" }]
                 },
                 {
@@ -475,7 +546,7 @@
                   "id": "node_112",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "It wasn't a. we're not in a. Dana, why would you—",
+                  "text": "It wasn't a cult. Dana, why would you say that?",
                   "outputs": [{ "targetNodeId": "node_113" }]
                 },
                 {
@@ -502,14 +573,14 @@
                   "id": "node_121",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "You don't. we were at the. I had on that green. you said you liked my—",
+                  "text": "You don't remember? I was wearing that green dress. You said you liked my earrings.",
                   "outputs": [{ "targetNodeId": "node_122" }]
                 },
                 {
                   "id": "node_122",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "I remember the green. The rest is. fuzzy. Does that happen to you? Time collapsing?",
+                  "text": "I remember the green dress. The rest is fuzzy. Does that happen to you? Time collapsing?",
                   "outputs": [{ "targetNodeId": "node_123" }]
                 },
                 {
@@ -536,7 +607,7 @@
                   "id": "node_130",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I should check on. the thing needs. excuse me.",
+                  "text": "I should check on the oven. Excuse me.",
                   "stageDirections": "[Mara exits. The wooden spoon goes with her.]",
                   "outputs": [{ "targetNodeId": "node_131" }]
                 },
@@ -544,7 +615,7 @@
                   "id": "node_131",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "She's nervous. Don't. she wants tonight to be. you know how she gets.",
+                  "text": "She's nervous. She wants tonight to go well. You know how she gets.",
                   "outputs": [{ "targetNodeId": "node_132" }]
                 },
                 {
@@ -558,7 +629,7 @@
                   "id": "node_133",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "She gets. focused. The butter has to be room temperature. There's a whole thing with the napkins.",
+                  "text": "She gets focused. The butter has to be room temperature. There's a whole thing with the napkins.",
                   "outputs": [{ "targetNodeId": "node_134" }]
                 },
                 {
@@ -581,7 +652,7 @@
                   "id": "node_141",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "They have to be folded. there's a YouTube video. Seventeen minutes. I've seen it four times.",
+                  "text": "They have to be folded a specific way. There's a YouTube video, seventeen minutes long. I've seen it four times.",
                   "outputs": [{ "targetNodeId": "node_142" }]
                 },
                 {
@@ -595,7 +666,7 @@
                   "id": "node_143",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "That's what I. anyway. She cares. Even if the caring is. intense.",
+                  "text": "That's what I said. Anyway, she cares. Even if the caring gets intense.",
                   "outputs": [{ "targetNodeId": "node_144" }]
                 },
                 {
@@ -663,7 +734,7 @@
                   "id": "node_163",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "His office. The radios. You can look but. actually, don't. They're in a delicate phase.",
+                  "text": "His office. The radios. You can look but actually, don't. They're in a delicate phase.",
                   "outputs": [{ "targetNodeId": "node_164" }]
                 },
                 {
@@ -686,7 +757,7 @@
                   "id": "node_170",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Okay! The first course is. it's nothing, really. Just a little—",
+                  "text": "Okay! The first course is ready. It's nothing elaborate, just a little amuse-bouche.",
                   "stageDirections": "[Mara returns. The wooden spoon is gone.]",
                   "outputs": [{ "targetNodeId": "node_210" }]
                 },
@@ -728,7 +799,7 @@
                   "id": "node_192",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "I said don't. oh. You're in there. Okay. What do you think?",
+                  "text": "I said don't—oh. You're in there. Okay. What do you think?",
                   "stageDirections": "[Eli appears in the doorway.]",
                   "outputs": [{ "targetNodeId": "node_193" }]
                 },
@@ -752,7 +823,7 @@
                   "id": "node_195",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Forty-three. Forty-four if you count the one that doesn't. anyway. Forty-three working ones. Mara says it's a problem. I say it's a collection.",
+                  "text": "Forty-three. Forty-four if you count the broken one. Mara says it's a problem. I say it's a collection.",
                   "outputs": [{ "targetNodeId": "node_199" }]
                 },
                 {
@@ -793,7 +864,7 @@
                   "id": "node_201",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "—don't know why I invited them. I don't. It seemed like. at the time it seemed like—",
+                  "text": "—don't know why I invited them. At the time it seemed like a good idea—",
                   "stageDirections": "[Mara's voice, muffled through the door.]",
                   "outputs": [{ "targetNodeId": "node_202" }]
                 },
@@ -809,7 +880,7 @@
                   "id": "node_203",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "—I'm not. I just. there's something about them that. I can't explain it—",
+                  "text": "—I'm not upset. There's just something about them I can't explain—",
                   "outputs": [{ "targetNodeId": "node_204" }]
                 },
                 {
@@ -822,7 +893,7 @@
                   "id": "node_210",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "There you are! We were just. we should eat. Before it gets. things can get cold. Or hot. Depending on what they're supposed to be.",
+                  "text": "There you are! We should eat before things get cold. Or too hot. Depending.",
                   "outputs": [{ "targetNodeId": "node_211" }]
                 },
                 {
@@ -836,14 +907,14 @@
                   "id": "node_212",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "Mara. These napkins. They're. what are they supposed to be?",
+                  "text": "Mara, these napkins are incredible. What are they supposed to be?",
                   "outputs": [{ "targetNodeId": "node_213" }]
                 },
                 {
                   "id": "node_213",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Swans. They're swans. Or they were supposed to. you can't tell they're swans?",
+                  "text": "Swans. They're swans. You can't tell they're swans?",
                   "outputs": [{ "targetNodeId": "node_214" }]
                 },
                 {
@@ -857,7 +928,7 @@
                   "id": "node_215",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "I thought they were. never mind. Swans. Yes. I see it now.",
+                  "text": "I thought they were something else. Never mind. Swans. Yes. I see it now.",
                   "outputs": [{ "targetNodeId": "node_216" }]
                 },
                 {
@@ -871,7 +942,7 @@
                   "id": "node_300",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "It's a. don't eat it yet. You have to. there's a way to eat it. Let me explain.",
+                  "text": "Don't eat it yet. There's a specific way to eat it. Let me explain.",
                   "outputs": [{ "targetNodeId": "node_301" }]
                 },
                 {
@@ -885,7 +956,7 @@
                   "id": "node_302",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "There's a. the chef at the place we went, in. where was it. The small place. They said you're supposed to let it. anyway. Eat it however you want. I don't care.",
+                  "text": "The chef at that place we went—the small place in the Village—said you're supposed to let it rest on your tongue first. But eat it however you want. I don't care.",
                   "outputs": [{ "targetNodeId": "node_303" }]
                 },
                 {
@@ -899,7 +970,7 @@
                   "id": "node_304",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I don't. fine. You're supposed to eat the crispy part first. Then the soft part. Then the. there's a third part.",
+                  "text": "Fine. You're supposed to eat the crispy part first, then the soft part. There's a third part underneath.",
                   "outputs": [{ "targetNodeId": "node_305" }]
                 },
                 {
@@ -930,7 +1001,7 @@
                   "id": "node_312",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "I listen. I just don't. eating instructions. It feels like a lot.",
+                  "text": "I listen. I just don't need eating instructions. It feels like a lot.",
                   "outputs": [{ "targetNodeId": "node_313" }]
                 },
                 {
@@ -950,7 +1021,7 @@
                   "id": "node_321",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Oh. You just. okay. That's. that works too. I guess.",
+                  "text": "Oh. You just ate it. Okay. That works too, I guess.",
                   "outputs": [{ "targetNodeId": "node_322" }]
                 },
                 {
@@ -979,7 +1050,7 @@
                   "id": "node_325",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Is it? Good. I wasn't sure about the. the thing I did with the. anyway. Good.",
+                  "text": "Is it? Good. I wasn't sure about the reduction. Anyway, good.",
                   "outputs": [{ "targetNodeId": "node_350" }]
                 },
                 {
@@ -993,7 +1064,7 @@
                   "id": "node_327",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's. ha. At least you're honest. Eli does that. Inhales food. Doesn't taste anything. Twenty years of cooking and he—",
+                  "text": "At least you're honest. Eli does that too. Inhales food. Doesn't taste anything.",
                   "outputs": [{ "targetNodeId": "node_328" }]
                 },
                 {
@@ -1014,7 +1085,7 @@
                   "id": "node_331",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "The. it's underneath. There's a. you have to lift the. here, let me—",
+                  "text": "It's underneath. You have to lift the crispy layer. Here, let me show you—",
                   "outputs": [{ "targetNodeId": "node_332" }]
                 },
                 {
@@ -1043,7 +1114,7 @@
                   "id": "node_335",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Oh! Good reflexes. I'm. sorry. I shouldn't have. I get very. hands-on. Eli says it's a problem.",
+                  "text": "Oh! Good reflexes. I'm sorry, I shouldn't have reached. I get very hands-on. Eli says it's a problem.",
                   "outputs": [{ "targetNodeId": "node_336" }]
                 },
                 {
@@ -1063,21 +1134,21 @@
                   "id": "node_338",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "The. oh. The tablecloth is. it was my grandmother's. It's. it's fine. It's fine. Everything's fine.",
+                  "text": "The tablecloth—it was my grandmother's. It's fine. Everything's fine.",
                   "outputs": [{ "targetNodeId": "node_339" }]
                 },
                 {
                   "id": "node_339",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "It's not her grandmother's. She bought it at. where was it. The place with the—",
+                  "text": "It's not her grandmother's. She bought it at that home goods store in SoHo.",
                   "outputs": [{ "targetNodeId": "node_339b" }]
                 },
                 {
                   "id": "node_339b",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Eli. Please. Just. get the. the thing. For cleaning.",
+                  "text": "Eli, please. Just get the club soda.",
                   "outputs": [{ "targetNodeId": "node_339c" }]
                 },
                 {
@@ -1120,7 +1191,7 @@
                   "id": "node_344",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Nervous? About. about what? About us? We're not. we're very relaxed people. Aren't we relaxed, Eli?",
+                  "text": "Nervous? About what? About us? We're very relaxed people. Aren't we relaxed, Eli?",
                   "outputs": [{ "targetNodeId": "node_344b" }]
                 },
                 {
@@ -1141,7 +1212,7 @@
                   "id": "node_346",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Four. Well, five if you count the. and then dessert. And then the. there's a thing after dessert. A palate. it's not important.",
+                  "text": "Four courses. Five if you count the amuse-bouche. Then dessert. Then a palate cleanser. It's not important.",
                   "outputs": [{ "targetNodeId": "node_350" }]
                 },
                 {
@@ -1175,7 +1246,7 @@
                   "id": "node_351",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I did mention. I said. didn't I say? I feel like I said.",
+                  "text": "I did mention it. Didn't I? I feel like I said something.",
                   "outputs": [{ "targetNodeId": "node_352" }]
                 },
                 {
@@ -1205,7 +1276,7 @@
                   "id": "node_361",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Art history! I almost. in college I thought about. anyway. I sell insurance now. Radio is the hobby.",
+                  "text": "Art history! In college I almost majored in that. But I sell insurance now. Radio is the hobby.",
                   "outputs": [{ "targetNodeId": "node_362" }]
                 },
                 {
@@ -1219,7 +1290,7 @@
                   "id": "node_363",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "It's not. they're vintage. They have value. Some of them are worth more than. anyway. Art history. That's interesting. Tell me something.",
+                  "text": "It's not a condition. They're vintage. They have value. Anyway, art history. That's interesting. Tell me something.",
                   "outputs": [{ "targetNodeId": "node_364" }]
                 },
                 {
@@ -1234,14 +1305,14 @@
                   "id": "node_365",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "Did you know there's a painting. well, not haunted. But there's a Caravaggio that. people who owned it kept dying. Badly.",
+                  "text": "Did you know there's a painting—well, not haunted exactly. But there's a Caravaggio where people who owned it kept dying. Badly.",
                   "outputs": [{ "targetNodeId": "node_366" }]
                 },
                 {
                   "id": "node_366",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's. at dinner? We're doing death at dinner? Okay. I can work with that.",
+                  "text": "Death at dinner? Okay. I can work with that.",
                   "outputs": [{ "targetNodeId": "node_390" }]
                 },
                 {
@@ -1276,7 +1347,7 @@
                   "id": "node_372",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "We're not. it's not. Dana, you're being—",
+                  "text": "We're not just making conversation. Dana, you're being—",
                   "outputs": [{ "targetNodeId": "node_373" }]
                 },
                 {
@@ -1296,14 +1367,14 @@
                   "id": "node_380",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "I'd rather not talk about work. Is that. is that okay?",
+                  "text": "I'd rather not talk about work. Is that okay?",
                   "outputs": [{ "targetNodeId": "node_381" }]
                 },
                 {
                   "id": "node_381",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Of course. We don't have to. Eli, we don't have to talk about work. Let's talk about. what else is there. Travel? Hobbies? Fears?",
+                  "text": "Of course. We don't have to talk about work. What else is there? Travel? Hobbies? Fears?",
                   "outputs": [{ "targetNodeId": "node_382" }]
                 },
                 {
@@ -1331,7 +1402,7 @@
                   "id": "node_390",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "I should check on the. the next course needs. excuse me.",
+                  "text": "I should check on the next course. Excuse me.",
                   "stageDirections": "[Eli exits to the kitchen. You hear something clatter.]",
                   "outputs": [{ "targetNodeId": "node_391" }]
                 },
@@ -1339,14 +1410,14 @@
                   "id": "node_391",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "He's. the kitchen is his. he has a system. Like I have a system. Different systems. Competing systems.",
+                  "text": "The kitchen is his domain. He has a system. Like I have a system. Different systems. Competing systems.",
                   "outputs": [{ "targetNodeId": "node_392" }]
                 },
                 {
                   "id": "node_392",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "How long have you two been. married? Together? What's the word?",
+                  "text": "How long have you two been married? Together? What's the word?",
                   "outputs": [{ "targetNodeId": "node_393" }]
                 },
                 {
@@ -1367,7 +1438,7 @@
                   "id": "node_395",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "First date. First real date. The wedding. The. there was a break. In the middle. We don't count the break.",
+                  "text": "First date. First real date. The wedding. There was a break in the middle. We don't count the break.",
                   "outputs": [{ "targetNodeId": "node_396" }]
                 },
                 {
@@ -1390,7 +1461,7 @@
                   "id": "node_401",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Nothing. Everything. The usual things that happen during breaks. We don't. I shouldn't have mentioned. Dana, why did you ask about—",
+                  "text": "Nothing. Everything. The usual things that happen during breaks. I shouldn't have mentioned it.",
                   "outputs": [{ "targetNodeId": "node_402" }]
                 },
                 {
@@ -1404,7 +1475,7 @@
                   "id": "node_403",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Right. Yes. You're right. I. sorry. I sometimes. things come out before I. is it warm in here? It feels warm.",
+                  "text": "Right. Yes. You're right. Sorry. Things come out before I can stop them. Is it warm in here?",
                   "outputs": [{ "targetNodeId": "node_404" }]
                 },
                 {
@@ -1424,7 +1495,7 @@
                   "id": "node_411",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Is it? It doesn't feel. well, some days it does. Most days it doesn't. The days blur.",
+                  "text": "Is it? Some days it feels long. Most days it doesn't. The days blur.",
                   "outputs": [{ "targetNodeId": "node_412" }]
                 },
                 {
@@ -1445,14 +1516,14 @@
                   "id": "node_420",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "This wine is. what is this wine? I forgot to ask.",
+                  "text": "This wine is good. What is it? I forgot to ask.",
                   "outputs": [{ "targetNodeId": "node_421" }]
                 },
                 {
                   "id": "node_421",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "The. oh. That's the one Eli found. At the place. The. I already told you about the place. It moved.",
+                  "text": "Oh, that's the one Eli found. At the place I told you about. The one that moved.",
                   "outputs": [{ "targetNodeId": "node_422" }]
                 },
                 {
@@ -1466,14 +1537,14 @@
                   "id": "node_423",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "That's. ha. Yes. Wine purgatory. I'm going to tell Eli you said that. He'll. he won't like it. But I'll tell him anyway.",
+                  "text": "Ha. Wine purgatory. I'm going to tell Eli you said that. He won't like it, but I'll tell him anyway.",
                   "outputs": [{ "targetNodeId": "node_430" }]
                 },
                 {
                   "id": "node_430",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "The second course is. there's been a development.",
+                  "text": "The second course—there's been a development.",
                   "stageDirections": "[Eli returns. He is holding a colander. There is no explanation for the colander.]",
                   "outputs": [{ "targetNodeId": "node_431" }]
                 },
@@ -1481,14 +1552,14 @@
                   "id": "node_431",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "A development? What kind of. why are you holding the colander?",
+                  "text": "A development? Why are you holding the colander?",
                   "outputs": [{ "targetNodeId": "node_432" }]
                 },
                 {
                   "id": "node_432",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "I moved it. Deliberately. As an act of. I'm making a point.",
+                  "text": "I moved it. Deliberately. I'm making a point.",
                   "outputs": [{ "targetNodeId": "node_433" }]
                 },
                 {
@@ -1502,14 +1573,14 @@
                   "id": "node_434",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Everything has a spot! Everything! And if one thing moves. if I move one thing. it's a crisis. It's always a crisis.",
+                  "text": "Everything has a spot! Everything! And if I move one thing, it's a crisis. It's always a crisis.",
                   "outputs": [{ "targetNodeId": "node_435" }]
                 },
                 {
                   "id": "node_435",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "Are we. is this. should we be here for this?",
+                  "text": "Should we be here for this?",
                   "outputs": [{ "targetNodeId": "node_436" }]
                 },
                 {
@@ -1532,7 +1603,7 @@
                   "id": "node_441",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I just. I need things to be. if I can't control the small things, how am I supposed to—",
+                  "text": "I need things to be in order. If I can't control the small things, how am I supposed to—",
                   "outputs": [{ "targetNodeId": "node_442" }]
                 },
                 {
@@ -1546,7 +1617,7 @@
                   "id": "node_443",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "I didn't. can we do this later? We have guests. We have. this is not the time.",
+                  "text": "Can we do this later? We have guests. This is not the time.",
                   "outputs": [{ "targetNodeId": "node_470" }]
                 },
                 {
@@ -1560,7 +1631,7 @@
                   "id": "node_451",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "No! No. We're fine. This is. this is just how we. it's fine. Sit. Please. Eli, put the colander back.",
+                  "text": "No! We're fine. This is just how we are. It's fine. Sit. Please. Eli, put the colander back.",
                   "outputs": [{ "targetNodeId": "node_452" }]
                 },
                 {
@@ -1610,7 +1681,7 @@
                   "id": "node_463",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Why are we. why are you. this is a dinner party. We're supposed to be. this is supposed to be nice.",
+                  "text": "Why are we doing this now? This is a dinner party. This is supposed to be nice.",
                   "outputs": [{ "targetNodeId": "node_464" }]
                 },
                 {
@@ -1630,7 +1701,7 @@
                   "id": "node_470",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "The second course will be. it's going to be. I should go help. With the colander situation.",
+                  "text": "The second course will be ready soon. I should go help with the colander situation.",
                   "outputs": [{ "targetNodeId": "node_471" }]
                 },
                 {
@@ -1779,7 +1850,7 @@
                   "id": "node_511",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "Should we check on them? Or should we. I don't know. Sit here. Drink more wine. Pretend things are normal.",
+                  "text": "Should we check on them? Or sit here, drink more wine, and pretend things are normal?",
                   "outputs": [{ "targetNodeId": "node_512" }]
                 },
                 {
@@ -1824,7 +1895,7 @@
                   "id": "node_531",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "Are you? That's useful. That's. actually, that's sad. But useful.",
+                  "text": "Are you? That's useful. Actually, that's sad. But useful.",
                   "outputs": [{ "targetNodeId": "node_532" }]
                 },
                 {
@@ -1852,14 +1923,14 @@
                   "id": "node_542",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "I'm serious. What's normal? I can't remember the last time something felt. I don't know. Expected.",
+                  "text": "I'm serious. What's normal? I can't remember the last time something felt expected.",
                   "outputs": [{ "targetNodeId": "node_543" }]
                 },
                 {
                   "id": "node_543",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "That's. okay. That's actually. are you okay? Real question.",
+                  "text": "That's actually concerning. Are you okay? Real question.",
                   "outputs": [{ "targetNodeId": "node_544" }]
                 },
                 {
@@ -1889,7 +1960,7 @@
                   "id": "node_547",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "Yes. I'm fine. It was just a. I'm fine.",
+                  "text": "Yes. I'm fine. It was just a moment. I'm fine.",
                   "outputs": [{ "targetNodeId": "node_548" }]
                 },
                 {
@@ -1910,7 +1981,7 @@
                   "id": "node_550",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Okay! The second course! It's. it exists. It's here.",
+                  "text": "Okay! The second course! It exists. It's here.",
                   "stageDirections": "[Mara returns. Her eyes are slightly red. Her smile is perfect.]",
                   "outputs": [{ "targetNodeId": "node_551" }]
                 },
@@ -1933,7 +2004,7 @@
                   "id": "node_561",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Oh! You. I was just. allergies. There's something in the. anyway. The second course!",
+                  "text": "Oh! I was just—allergies. There's something in the air. Anyway, the second course!",
                   "outputs": [{ "targetNodeId": "node_550" }]
                 }
               ]

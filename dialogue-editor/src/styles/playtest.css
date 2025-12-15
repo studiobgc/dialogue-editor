@@ -1,30 +1,32 @@
 /**
- * Playtest Mode - Illustrated Text Adventure
+ * Playtest Mode - Indie Game Visual Novel
  * 
  * Design philosophy:
- * - Isometric hand-drawn illustrations (childlike but sophisticated)
- * - Stable layout - text doesn't jump around
- * - Snappy animations (no sluggishness)
- * - Matches Elaine May's writing: understated, observational, specific
+ * - Large, minimal, odd illustrations
+ * - Harmonious text placement
+ * - Disco Elysium-inspired skill interjections
+ * - MOUTHWASHING-inspired character presence
+ * - Indie game feel, NOT a web app
  * 
- * Layout: Split view - illustration left, text right
+ * All values use design tokens from tokens.css
  */
 
 /* ========================================
-   BASE OVERLAY
+   BASE OVERLAY - Split layout
    ======================================== */
 
 .playtest-overlay {
   position: fixed;
   inset: 0;
-  background: #f5f3ef;
+  background: #0a0a0b;
   z-index: 9999;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr auto;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  font-family: 'Georgia', serif;
+  transition: opacity var(--transition-normal) ease;
+  font-family: var(--font-mono);
+  overflow: hidden;
 }
 
 .playtest-overlay.visible {
@@ -33,51 +35,154 @@
 
 .playtest-overlay.hiding {
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--transition-fast) ease;
+}
+
+/* Subtle grain texture */
+.playtest-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.5;
 }
 
 /* ========================================
-   ILLUSTRATION PANEL (Left)
+   ILLUSTRATION PANEL - Large, minimal, odd
    ======================================== */
 
 .playtest-illustration {
   grid-column: 1;
-  grid-row: 1;
-  background: #eae6df;
+  grid-row: 1 / 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: var(--space-8);
+  background: #0d0d0e;
   position: relative;
   overflow: hidden;
 }
 
-.playtest-illustration::after {
+/* Character portrait - large, minimal */
+.playtest-portrait {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 3/4;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Abstract character representation */
+.playtest-portrait-shape {
+  width: 280px;
+  height: 360px;
+  position: relative;
+  transition: all 0.5s ease;
+}
+
+/* Each character gets a unique abstract shape */
+.playtest-portrait-shape[data-speaker="char_host"] {
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    #F5E6E0 2%, 
+    #F5E6E0 8%,
+    transparent 8%,
+    transparent 15%,
+    #1a1817 15%
+  );
+  clip-path: polygon(
+    30% 0%, 70% 0%, 
+    75% 15%, 80% 40%, 
+    75% 70%, 70% 100%,
+    30% 100%, 25% 70%,
+    20% 40%, 25% 15%
+  );
+}
+
+.playtest-portrait-shape[data-speaker="char_partner"] {
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    #C7F9CC 2%, 
+    #C7F9CC 8%,
+    transparent 8%,
+    transparent 15%,
+    #141a14 15%
+  );
+  clip-path: polygon(
+    35% 0%, 65% 0%, 
+    70% 20%, 72% 50%, 
+    68% 80%, 60% 100%,
+    40% 100%, 32% 80%,
+    28% 50%, 30% 20%
+  );
+}
+
+.playtest-portrait-shape[data-speaker="char_guest1"] {
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    #FFD6A5 2%, 
+    #FFD6A5 8%,
+    transparent 8%,
+    transparent 15%,
+    #1a1610 15%
+  );
+  clip-path: polygon(
+    25% 0%, 75% 0%, 
+    78% 25%, 76% 55%, 
+    72% 85%, 65% 100%,
+    35% 100%, 28% 85%,
+    24% 55%, 22% 25%
+  );
+}
+
+.playtest-portrait-shape[data-speaker="char_p"] {
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    #B8C0FF 2%, 
+    #B8C0FF 8%,
+    transparent 8%,
+    transparent 15%,
+    #12121a 15%
+  );
+  clip-path: polygon(
+    32% 0%, 68% 0%, 
+    72% 18%, 74% 45%, 
+    70% 75%, 62% 100%,
+    38% 100%, 30% 75%,
+    26% 45%, 28% 18%
+  );
+}
+
+/* No speaker - mysterious void */
+.playtest-portrait-shape:not([data-speaker]) {
+  background: radial-gradient(ellipse at center, #1a1a1c 0%, transparent 70%);
+}
+
+/* Floating elements for atmosphere */
+.playtest-portrait::before {
   content: '';
   position: absolute;
-  right: 0;
-  top: 10%;
-  bottom: 10%;
-  width: 1px;
-  background: #d4cfc5;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(
+    circle at 30% 70%,
+    rgba(255,255,255,0.02) 0%,
+    transparent 50%
+  );
+  animation: float 8s ease-in-out infinite;
 }
 
-.playtest-illustration canvas,
-.playtest-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  image-rendering: crisp-edges;
-}
-
-/* Location label - hidden, rendered on canvas */
-.playtest-location {
-  display: none;
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(10px, -10px) rotate(1deg); }
 }
 
 /* ========================================
-   TEXT PANEL (Right)
+   TEXT PANEL - Right side, harmonious
    ======================================== */
 
 .playtest-text-panel {
@@ -85,69 +190,137 @@
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  padding: 60px 50px;
+  justify-content: center;
+  padding: var(--space-12) var(--space-10);
   overflow-y: auto;
-  background: #f5f3ef;
+  position: relative;
+  z-index: 1;
 }
 
 .playtest-scene {
-  flex: 1;
+  width: 100%;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
-  max-width: 480px;
 }
 
 /* ========================================
-   TYPOGRAPHY
+   TYPOGRAPHY - Indie game aesthetic
    ======================================== */
 
 .playtest-speaker {
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: #6a6560;
-  margin-bottom: 16px;
-  opacity: 1;
+  color: var(--speaker-color, #888);
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .playtest-speaker-name {
-  color: var(--speaker-color, #4a4540);
-  border-bottom: 1px solid currentColor;
-  padding-bottom: 2px;
+  color: var(--speaker-color, #888);
+}
+
+/* Speaker indicator dot */
+.playtest-speaker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--speaker-color, #888);
+  border-radius: 50%;
 }
 
 .playtest-dialogue {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  color: #2a2520;
-  min-height: 100px;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: 1.7;
+  color: #e8e8e8;
+  min-height: 80px;
+  white-space: pre-wrap;
+  letter-spacing: 0.01em;
 }
 
 .playtest-dialogue em {
   font-style: italic;
+  color: #a0a0a0;
 }
 
-/* Stage directions - subtle, not distracting */
+/* Stage directions - minimal, integrated */
 .playtest-stage-directions {
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 12px;
-  color: #8a8580;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: #666;
   font-style: italic;
-  margin-bottom: 20px;
-  padding-left: 16px;
-  border-left: 2px solid #d4cfc5;
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 2px solid #333;
 }
 
-/* Typewriter cursor - subtle */
+/* ========================================
+   SKILL INTERJECTIONS - Disco Elysium style
+   ======================================== */
+
+.playtest-skill-check {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid var(--skill-color, #6B8E9F);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.playtest-skill-name {
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--skill-color, #6B8E9F);
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-1);
+}
+
+.playtest-skill-text {
+  color: #999;
+  font-style: italic;
+}
+
+/* Skill check result indicator */
+.playtest-skill-check[data-result="success"] {
+  border-left-color: #6B9F8E;
+}
+
+.playtest-skill-check[data-result="failure"] {
+  border-left-color: #9F6B6B;
+}
+
+/* Passive check - appears inline */
+.playtest-passive-check {
+  display: inline;
+  color: var(--skill-color, #6B8E9F);
+  font-style: italic;
+}
+
+.playtest-passive-check::before {
+  content: '[';
+  opacity: 0.5;
+}
+
+.playtest-passive-check::after {
+  content: ']';
+  opacity: 0.5;
+}
+
+/* Typewriter cursor */
 .playtest-cursor {
   display: inline-block;
   width: 2px;
-  height: 0.9em;
-  background: #6a6560;
-  margin-left: 1px;
-  animation: cursorBlink 0.6s step-end infinite;
+  height: 1.1em;
+  background: #e8e8e8;
+  margin-left: 2px;
+  animation: cursorBlink 1s step-end infinite;
   vertical-align: text-bottom;
 }
 
@@ -156,83 +329,121 @@
 }
 
 /* ========================================
-   CHOICES - Clean, minimal
+   CHOICES - Indie game style
    ======================================== */
 
 .playtest-choices {
-  margin-top: 32px;
+  margin-top: var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .playtest-choice {
   background: transparent;
-  border: 1px solid #c4bfb5;
-  color: #4a4540;
-  padding: 14px 20px;
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 13px;
+  border: none;
+  border-left: 2px solid #333;
+  color: #888;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
   text-align: left;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.2s ease;
   position: relative;
 }
 
-.playtest-choice::before {
-  content: '→';
-  position: absolute;
-  left: -20px;
-  opacity: 0;
-  transition: all 0.1s ease;
-  color: #6a6560;
-}
-
 .playtest-choice:hover {
-  border-color: #8a8580;
-  background: #eae6df;
-  padding-left: 28px;
+  color: #e8e8e8;
+  border-left-color: #e8e8e8;
+  padding-left: var(--space-5);
 }
 
-.playtest-choice:hover::before {
-  opacity: 1;
-  left: 8px;
-}
-
-.playtest-choice:active {
-  transform: translateX(2px);
+.playtest-choice:focus {
+  outline: none;
+  color: #e8e8e8;
+  border-left-color: #e8e8e8;
 }
 
 .playtest-choice.visited {
-  border-style: dashed;
-  opacity: 0.5;
+  opacity: 0.4;
+  color: #555;
 }
 
-/* Continue button */
+/* Skill-gated choices */
+.playtest-choice[data-skill] {
+  position: relative;
+}
+
+.playtest-choice[data-skill]::after {
+  content: attr(data-skill);
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--skill-color, #6B8E9F);
+  opacity: 0.7;
+}
+
+.playtest-choice[data-skill]:hover::after {
+  opacity: 1;
+}
+
+/* Locked choice - skill too low */
+.playtest-choice.locked {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.playtest-choice.locked::before {
+  content: '○';
+  position: absolute;
+  left: -12px;
+  color: #9F6B6B;
+}
+
+/* ========================================
+   CONTINUE BUTTON - Bottom right, minimal
+   ======================================== */
+
 .playtest-continue {
+  position: fixed;
+  bottom: var(--space-8);
+  right: var(--space-8);
   background: transparent;
   border: none;
-  color: #8a8580;
-  padding: 16px 0;
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 12px;
+  color: #555;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
   cursor: pointer;
-  transition: all 0.1s ease;
-  text-align: left;
-}
-
-.playtest-continue:hover {
-  color: #4a4540;
+  transition: all 0.2s ease;
+  z-index: 10;
 }
 
 .playtest-continue::after {
   content: ' →';
+  transition: transform 0.2s ease;
   display: inline-block;
-  transition: transform 0.1s ease;
+}
+
+.playtest-continue:hover {
+  color: #e8e8e8;
 }
 
 .playtest-continue:hover::after {
   transform: translateX(4px);
+}
+
+.playtest-continue:focus {
+  outline: none;
+  color: #e8e8e8;
 }
 
 /* ========================================
@@ -241,85 +452,86 @@
 
 .playtest-end {
   text-align: center;
-  padding: 40px 0;
+  padding: var(--space-10) 0;
 }
 
 .playtest-end-symbol {
-  font-size: 24px;
-  color: #c4bfb5;
-  margin-bottom: 16px;
+  font-size: var(--text-2xl);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
   letter-spacing: 0.5em;
 }
 
 .playtest-end-text {
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 11px;
-  color: #8a8580;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.15em;
 }
 
 /* ========================================
-   CONTROLS - Top right, minimal
+   CONTROLS - Minimal, top right
    ======================================== */
 
 .playtest-controls {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: var(--space-4);
+  right: var(--space-4);
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   z-index: 20;
 }
 
 .playtest-control-btn {
   width: 32px;
   height: 32px;
-  background: #f5f3ef;
-  border: 1px solid #d4cfc5;
-  color: #8a8580;
-  font-size: 14px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all var(--transition-fast) ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .playtest-control-btn:hover {
-  border-color: #8a8580;
-  color: #4a4540;
+  background: var(--surface-raised);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .playtest-control-btn.close:hover {
-  border-color: #b08080;
-  color: #8a4040;
+  border-color: var(--status-error);
+  color: var(--status-error);
 }
 
 /* ========================================
-   DEBUG PANEL - Bottom
+   DEBUG PANEL - Bottom, collapsible
    ======================================== */
 
 .playtest-footer {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  background: #eae6df;
-  border-top: 1px solid #d4cfc5;
-  padding: 12px 24px;
+  background: var(--surface-base);
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 10;
 }
 
 .playtest-debug {
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 10px;
-  color: #8a8580;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
   display: flex;
-  gap: 20px;
+  gap: var(--space-5);
   opacity: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--transition-fast) ease;
 }
 
 .playtest-debug.visible {
@@ -328,145 +540,72 @@
 
 .playtest-var {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .playtest-var-name {
-  color: #6a8a6a;
+  color: var(--status-success);
 }
 
 .playtest-var-value {
-  color: #8a6a5a;
+  color: var(--node-instruction);
 }
 
 .playtest-debug-toggle {
   background: transparent;
   border: none;
-  color: #a0a0a0;
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 10px;
+  color: var(--text-disabled);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
 }
 
 .playtest-debug-toggle:hover {
-  color: #6a6560;
+  color: var(--text-tertiary);
 }
 
 .playtest-node-ref {
-  font-family: var(--font-mono, 'SF Mono', monospace);
-  font-size: 10px;
-  color: #c4bfb5;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-disabled);
 }
 
 /* ========================================
-   SCENE TRANSITIONS - Fast, subtle
+   SCENE TRANSITIONS
    ======================================== */
 
 .playtest-scene-enter {
   opacity: 0;
-  animation: sceneIn 0.15s ease forwards;
+  animation: sceneIn var(--transition-normal) ease forwards;
 }
 
 @keyframes sceneIn {
   to { opacity: 1; }
 }
 
-.playtest-illustration-enter {
-  opacity: 0;
-  animation: illustrationIn 0.2s ease forwards;
-}
-
-@keyframes illustrationIn {
-  to { opacity: 1; }
-}
-
 /* ========================================
-   MOOD COLORS - Subtle background shifts
+   AMBIENT GLOW - Mysterious atmosphere
    ======================================== */
 
 .playtest-overlay[data-mood="neutral"] {
-  background: #f5f3ef;
+  --ambient-color: var(--surface-ground);
 }
 
 .playtest-overlay[data-mood="tense"] {
-  background: #f5f1ef;
-}
-
-.playtest-overlay[data-mood="tense"] .playtest-illustration {
-  background: #ebe5df;
+  --ambient-color: #1a0d0d;
 }
 
 .playtest-overlay[data-mood="mysterious"] {
-  background: #f3f3f5;
-}
-
-.playtest-overlay[data-mood="mysterious"] .playtest-illustration {
-  background: #e5e5eb;
+  --ambient-color: #0d0d1a;
 }
 
 .playtest-overlay[data-mood="warm"] {
-  background: #f7f5ef;
-}
-
-.playtest-overlay[data-mood="warm"] .playtest-illustration {
-  background: #ede9df;
+  --ambient-color: #1a150d;
 }
 
 /* ========================================
-   SVG ILLUSTRATION STYLES
-   Hand-drawn aesthetic
-   ======================================== */
-
-.illustration-svg {
-  stroke: #3a3530;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
-/* Filled elements */
-.illustration-svg .fill-warm { fill: #e8dfd0; }
-.illustration-svg .fill-cool { fill: #d8e0e8; }
-.illustration-svg .fill-accent { fill: #d8c8b0; }
-.illustration-svg .fill-dark { fill: #4a4540; }
-.illustration-svg .fill-light { fill: #f5f0e8; }
-.illustration-svg .fill-floor { fill: #e0d8c8; }
-.illustration-svg .fill-wall { fill: #f0ebe0; }
-.illustration-svg .fill-shadow { fill: rgba(0,0,0,0.05); }
-
-/* Character silhouettes */
-.illustration-svg .person {
-  fill: #4a4540;
-  stroke: none;
-}
-
-.illustration-svg .person-outline {
-  fill: none;
-  stroke: #3a3530;
-  stroke-width: 2;
-}
-
-/* Furniture */
-.illustration-svg .furniture {
-  fill: #d8d0c0;
-  stroke: #3a3530;
-}
-
-/* Details - thinner lines */
-.illustration-svg .detail {
-  stroke-width: 0.75;
-  stroke: #6a6560;
-}
-
-/* Wobbly hand-drawn effect via filter */
-.illustration-svg .hand-drawn {
-  filter: url(#wobble);
-}
-
-/* ========================================
-   RESPONSIVE - Mobile stacks vertically
+   RESPONSIVE - Stack on mobile
    ======================================== */
 
 @media (max-width: 900px) {
@@ -476,21 +615,115 @@
   }
   
   .playtest-illustration {
+    grid-column: 1;
     grid-row: 1;
-  }
-  
-  .playtest-illustration::after {
-    right: 10%;
-    left: 10%;
-    top: auto;
-    bottom: 0;
-    width: auto;
-    height: 1px;
   }
   
   .playtest-text-panel {
     grid-column: 1;
     grid-row: 2;
-    padding: 30px 24px;
+    padding: var(--space-6) var(--space-6);
   }
+  
+  .playtest-portrait-shape {
+    width: 200px;
+    height: 260px;
+  }
+  
+  .playtest-continue {
+    bottom: var(--space-4);
+    right: var(--space-4);
+  }
+}
+
+@media (max-width: 600px) {
+  .playtest-overlay {
+    grid-template-rows: 30vh 1fr auto;
+  }
+  
+  .playtest-text-panel {
+    padding: var(--space-4);
+  }
+  
+  .playtest-dialogue {
+    font-size: var(--text-base);
+  }
+  
+  .playtest-portrait-shape {
+    width: 150px;
+    height: 195px;
+  }
+}
+
+/* ========================================
+   LOCATION LABEL - Minimal, atmospheric
+   ======================================== */
+
+.playtest-location {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  margin-bottom: var(--space-8);
+}
+
+/* ========================================
+   CHARACTER INFO TOOLTIP
+   ======================================== */
+
+.playtest-character-hint {
+  position: absolute;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: #444;
+  text-align: center;
+  max-width: 300px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.playtest-illustration:hover .playtest-character-hint {
+  opacity: 1;
+}
+
+/* ========================================
+   VARIABLE DISPLAY - Top corner, subtle
+   ======================================== */
+
+.playtest-variables {
+  position: fixed;
+  top: var(--space-4);
+  left: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 10;
+}
+
+.playtest-var {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.playtest-var-name {
+  color: #555;
+}
+
+.playtest-var-value {
+  color: #888;
+}
+
+.playtest-var-value.positive {
+  color: #6B9F8E;
+}
+
+.playtest-var-value.negative {
+  color: #9F6B6B;
 }

@@ -14,7 +14,6 @@
 
 import { GraphModel } from '../core/GraphModel';
 import { Node, Connection } from '../types/graph';
-import { SceneRenderer } from './SceneRenderer';
 
 interface PlaytestState {
   variables: Record<string, Record<string, boolean | number | string>>;
@@ -31,14 +30,12 @@ export class PlaytestMode {
   private typewriterTimeout: number | null = null;
   private isTyping = false;
   private debugVisible = false;
-  private currentLocation = 'THE APARTMENT';
-  private sceneRenderer: SceneRenderer;
+  private currentSpeakerId: string | null = null;
 
   constructor(model: GraphModel, onNodeFocus?: (nodeId: string) => void) {
     this.model = model;
     this.onNodeFocus = onNodeFocus;
     this.state = this.createInitialState();
-    this.sceneRenderer = new SceneRenderer();
   }
 
   private createInitialState(): PlaytestState {
@@ -98,7 +95,7 @@ export class PlaytestMode {
     
     this.overlay.innerHTML = `
       <div class="playtest-illustration" id="pt-illustration">
-        <div class="playtest-location" id="pt-location">${this.currentLocation}</div>
+        <div class="playtest-portrait"></div>
       </div>
       
       <div class="playtest-text-panel">
@@ -243,22 +240,23 @@ export class PlaytestMode {
     const illustrationPanel = this.overlay?.querySelector('#pt-illustration');
     if (!illustrationPanel) return;
 
-    const combinedText = text + (stageDirections || '');
-    const config = SceneRenderer.getSceneConfig(combinedText, speakerId);
+    // Get character info for hint
+    const characters = this.model.getCharacters();
+    const speaker = characters.find(c => c.id === speakerId);
     
-    // Only update if location changed
-    if (this.currentLocation !== config.location) {
-      this.currentLocation = config.location;
-      
-      // Remove old canvas
-      const existingCanvas = illustrationPanel.querySelector('canvas');
-      if (existingCanvas) existingCanvas.remove();
-      
-      // Render new scene
-      const canvas = this.sceneRenderer.render(config);
-      canvas.classList.add('playtest-canvas');
-      illustrationPanel.appendChild(canvas);
+    // Create or update portrait
+    let portrait = illustrationPanel.querySelector('.playtest-portrait') as HTMLElement;
+    if (!portrait) {
+      portrait = document.createElement('div');
+      portrait.className = 'playtest-portrait';
+      illustrationPanel.appendChild(portrait);
     }
+    
+    // Create abstract shape for speaker
+    portrait.innerHTML = `
+      <div class="playtest-portrait-shape" data-speaker="${speakerId || ''}"></div>
+      ${speaker ? `<div class="playtest-character-hint">${speaker.displayName || speaker.id}</div>` : ''}
+    `;
   }
 
   private typeText(text: string, onComplete: () => void): void {

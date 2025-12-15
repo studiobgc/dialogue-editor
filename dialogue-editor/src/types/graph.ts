@@ -136,6 +136,23 @@ export interface Character {
   displayName: string;
   color: string;
   previewImage?: string;
+  // Extended character profile (MOUTHWASHING-inspired)
+  description?: string;
+  philosophy?: string;
+  flaw?: string;
+  want?: string;
+  obsession?: string;
+  secret?: string;
+}
+
+export interface Skill {
+  description: string;
+  color: string;
+}
+
+export interface SkillCategories {
+  social?: Record<string, Skill>;
+  interior?: Record<string, Skill>;
 }
 
 export interface DialogueGraph {

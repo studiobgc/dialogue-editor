@@ -447,13 +447,20 @@ export class MCPBridge {
     // Uses imported constants from LayoutUtils (single source of truth)
     // NODE_WIDTH, NODE_HEIGHT, NODE_PADDING, H_GAP, V_GAP, DEFAULT_START_POSITION
     
-    // Convert characters with all required fields
+    // Convert characters with all required fields (including extended profile)
     const characters: import('../types/graph').Character[] = (projectData.characters || []).map(c => ({
       id: c.id,
       articyId: { low: 0, high: 0 },
       technicalName: c.id,
       displayName: c.name,
-      color: c.color
+      color: c.color,
+      // Extended character profile
+      description: c.description,
+      philosophy: c.philosophy,
+      flaw: c.flaw,
+      want: c.want,
+      obsession: c.obsession,
+      secret: c.secret
     }));
 
     // Process all conversations - use native layout algorithm
