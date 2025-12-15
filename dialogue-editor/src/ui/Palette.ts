@@ -75,11 +75,24 @@ export class Palette {
 
   private setupDragListeners(): void {
     const items = this.container.querySelectorAll('.palette-item');
+    const graphCanvas = document.getElementById('graph-canvas');
     
     items.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        const target = e.target as HTMLElement;
-        const nodeType = target.dataset.nodeType as NodeType;
+      const paletteItem = item as HTMLElement;
+      
+      // Click to add at center of canvas
+      paletteItem.addEventListener('click', () => {
+        const nodeType = paletteItem.dataset.nodeType as NodeType;
+        if (graphCanvas) {
+          const rect = graphCanvas.getBoundingClientRect();
+          // Add at center of visible canvas
+          this.onDrop(nodeType, rect.width / 2, rect.height / 2);
+        }
+      });
+      
+      paletteItem.addEventListener('dragstart', (e) => {
+        // Use currentTarget (the element with the listener) not target (could be child)
+        const nodeType = paletteItem.dataset.nodeType as NodeType;
         this.draggedItem = nodeType;
         
         // Set drag data
@@ -88,35 +101,52 @@ export class Palette {
           e.dataTransfer.effectAllowed = 'copy';
         }
         
-        target.classList.add('dragging');
+        paletteItem.classList.add('dragging');
       });
 
-      item.addEventListener('dragend', (e) => {
-        const target = e.target as HTMLElement;
-        target.classList.remove('dragging');
+      paletteItem.addEventListener('dragend', () => {
+        paletteItem.classList.remove('dragging');
         this.draggedItem = null;
       });
     });
 
-    // Setup drop target (the canvas)
+    // Setup drop target (canvas and canvas-container)
     const canvas = document.getElementById('graph-canvas');
-    if (canvas) {
-      canvas.addEventListener('dragover', (e) => {
+    const canvasContainer = document.getElementById('canvas-container');
+    
+    const setupDropTarget = (element: HTMLElement) => {
+      element.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         if (e instanceof DragEvent && e.dataTransfer) {
           e.dataTransfer.dropEffect = 'copy';
         }
       });
 
-      canvas.addEventListener('drop', (e) => {
+      element.addEventListener('dragenter', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+      });
+
+      element.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (this.draggedItem && e instanceof DragEvent) {
-          const rect = canvas.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
+          // Use canvas rect for coordinate calculation
+          const targetRect = canvas?.getBoundingClientRect() || element.getBoundingClientRect();
+          const x = e.clientX - targetRect.left;
+          const y = e.clientY - targetRect.top;
           this.onDrop(this.draggedItem, x, y);
+          this.draggedItem = null;
         }
       });
+    };
+
+    if (canvas) {
+      setupDropTarget(canvas);
+    }
+    if (canvasContainer) {
+      setupDropTarget(canvasContainer);
     }
   }
 

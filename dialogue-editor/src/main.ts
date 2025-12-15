@@ -13,6 +13,10 @@ import { StatusBar } from './ui/StatusBar';
 import { WelcomeOverlay, Template } from './ui/WelcomeOverlay';
 import { AIChat, GeneratedDialogue } from './ui/AIChat';
 import { ProjectManager } from './ui/ProjectManager';
+import { CommandPalette, createDefaultCommands } from './ui/CommandPalette';
+import { Coachmarks } from './ui/Coachmarks';
+import { InlineEditor } from './ui/InlineEditor';
+import { FloatingToolbar } from './ui/FloatingToolbar';
 import { Node, NodeType, Position } from './types/graph';
 import { NodeFactory } from './core/NodeFactory';
 
@@ -29,6 +33,10 @@ class DialogueEditor {
   private welcomeOverlay: WelcomeOverlay;
   private aiChat: AIChat;
   private projectManager: ProjectManager;
+  private commandPalette: CommandPalette;
+  private coachmarks: Coachmarks;
+  private inlineEditor: InlineEditor;
+  private floatingToolbar: FloatingToolbar;
   private isFirstLaunch: boolean = true;
 
   constructor() {
@@ -39,6 +47,12 @@ class DialogueEditor {
     // Initialize core components
     this.model = new GraphModel();
     this.renderer = new GraphRenderer(this.canvas);
+    
+    // Set up viewport animation callback for smooth animated transitions
+    this.renderer.getViewport().setAnimationCallback(() => {
+      this.renderer.requestRender();
+      this.render();
+    });
     
     // Initialize interaction manager with callbacks
     this.interaction = new InteractionManager(
@@ -67,6 +81,31 @@ class DialogueEditor {
     );
     this.projectManager = new ProjectManager(this.onProjectChange.bind(this));
 
+    // Initialize Command Palette (Cmd+/ to open)
+    this.commandPalette = new CommandPalette();
+    this.setupCommandPalette();
+
+    // Initialize Coachmarks for progressive onboarding
+    this.coachmarks = new Coachmarks();
+
+    // Initialize Inline Editor for double-click editing
+    this.inlineEditor = new InlineEditor({
+      onTextChange: (nodeId, text) => this.onInlineTextChange(nodeId, text),
+      onSpeakerChange: (nodeId, speakerId) => this.onInlineSpeakerChange(nodeId, speakerId),
+      onCreateNext: (nodeId) => this.createNodeAfter(nodeId, 'dialogueFragment'),
+      onCreateBranch: (nodeId) => this.createNodeAfter(nodeId, 'branch'),
+      onClose: () => this.render()
+    });
+
+    // Initialize Floating Toolbar
+    this.floatingToolbar = new FloatingToolbar({
+      onEdit: (node) => this.showInlineEditor(node),
+      onDuplicate: () => this.interaction.duplicateSelected(),
+      onDelete: () => this.interaction.deleteSelected(),
+      onAddAfter: (node) => this.createNodeAfter(node.id, 'dialogueFragment'),
+      onChangeColor: (node) => this.showColorPicker(node)
+    });
+
     // Setup toolbar actions
     this.setupToolbar();
 
@@ -76,64 +115,21 @@ class DialogueEditor {
     // Listen to model changes
     this.model.addListener(this.onModelChange.bind(this));
 
-    // Initial render
-    this.render();
+    // Ensure canvas is properly sized after layout completes
+    requestAnimationFrame(() => {
+      this.renderer.resize();
+      this.render();
+    });
     this.updateStatusBar();
 
     // Check if first launch and show welcome
     this.checkFirstLaunch();
 
-    // Add help button
-    this.addHelpButton();
-
-    // Add performance monitor (dev mode)
-    this.addPerfMonitor();
+    // Disable coachmarks - they're not helpful until interaction is solid
+    this.coachmarks.setEnabled(false);
 
     // Load current project if exists
     this.loadCurrentProject();
-  }
-
-  private addPerfMonitor(): void {
-    const monitor = document.createElement('div');
-    monitor.className = 'perf-monitor';
-    monitor.id = 'perf-monitor';
-    monitor.innerHTML = `
-      <div class="perf-monitor-item">
-        <span class="perf-monitor-label">FPS:</span>
-        <span class="perf-monitor-value good" id="perf-fps">60</span>
-      </div>
-      <div class="perf-monitor-item">
-        <span class="perf-monitor-label">Frame:</span>
-        <span class="perf-monitor-value" id="perf-frame">0.0ms</span>
-      </div>
-      <div class="perf-monitor-item">
-        <span class="perf-monitor-label">Nodes:</span>
-        <span class="perf-monitor-value" id="perf-nodes">0</span>
-      </div>
-    `;
-    document.body.appendChild(monitor);
-
-    // Update stats periodically
-    setInterval(() => {
-      const stats = this.renderer.getRenderStats();
-      if (stats) {
-        const fpsEl = document.getElementById('perf-fps');
-        const frameEl = document.getElementById('perf-frame');
-        const nodesEl = document.getElementById('perf-nodes');
-
-        if (fpsEl) {
-          fpsEl.textContent = stats.fps.toString();
-          fpsEl.className = 'perf-monitor-value ' + 
-            (stats.fps >= 55 ? 'good' : stats.fps >= 30 ? 'warning' : 'bad');
-        }
-        if (frameEl) {
-          frameEl.textContent = stats.frameTime.toFixed(1) + 'ms';
-        }
-        if (nodesEl) {
-          nodesEl.textContent = this.model.getNodes().length.toString();
-        }
-      }
-    }, 500);
   }
 
   private loadCurrentProject(): void {
@@ -202,10 +198,10 @@ class DialogueEditor {
     return this.generateSimpleDialogue(userMessage);
   }
 
-  private generateQuestDialogue(context: string): string {
+  private generateQuestDialogue(_context: string): string {
     const dialogue: GeneratedDialogue = {
       title: 'Quest Dialogue',
-      description: 'Generated from: ' + context.substring(0, 50),
+      description: 'Generated from: ' + _context.substring(0, 50),
       characters: [
         { name: 'Quest Giver', color: '#e74c3c' },
         { name: 'Player', color: '#4a90e2' }
@@ -272,7 +268,7 @@ class DialogueEditor {
     return `Here's a shop dialogue with a menu system:\n\n**Merchant** greets the player with options to:\n- **Buy** - Opens the buy interface\n- **Sell** - Opens the sell interface\n- **Leave** - Exit the conversation\n\nThe hub node allows returning to the menu after transactions.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
   }
 
-  private generateConversationDialogue(context: string): string {
+  private generateConversationDialogue(_context: string): string {
     const dialogue: GeneratedDialogue = {
       title: 'Conversation',
       characters: [
@@ -302,7 +298,7 @@ class DialogueEditor {
     return `Here's a conversation with a mysterious stranger:\n\nThe **Stranger** notices the player is new. Player can respond:\n- **Curious** - Friendly path, learns more\n- **Hostile** - Defensive, but stranger stays friendly\n\nBoth paths converge at the end.\n\n\`\`\`json\n${JSON.stringify(dialogue, null, 2)}\n\`\`\`\n\nClick **Apply to Canvas** to add this to your project!`;
   }
 
-  private generateSimpleDialogue(context: string): string {
+  private generateSimpleDialogue(_context: string): string {
     return `I'd be happy to help you create dialogue! Here are some things I can generate:\n\n• **Quest dialogues** - "Create a quest where a wizard needs help"\n• **Shop interactions** - "Make a merchant dialogue with buy/sell"\n• **Character conversations** - "Write a conversation with a mysterious stranger"\n• **Branching choices** - "Create a dialogue with moral choices"\n\nTell me more about your game or the specific scene you're working on, and I'll create a complete dialogue flow for you!`;
   }
 
@@ -471,17 +467,6 @@ class DialogueEditor {
     this.hideCanvasHint();
   }
 
-  private addHelpButton(): void {
-    const helpBtn = document.createElement('button');
-    helpBtn.className = 'help-button';
-    helpBtn.innerHTML = '?';
-    helpBtn.title = 'Show welcome screen';
-    helpBtn.addEventListener('click', () => {
-      this.welcomeOverlay.show();
-    });
-    document.body.appendChild(helpBtn);
-  }
-
   private updateCanvasHint(): void {
     const nodes = this.model.getNodes();
     const container = document.getElementById('canvas-container');
@@ -507,6 +492,41 @@ class DialogueEditor {
   private hideCanvasHint(): void {
     const hint = document.querySelector('.canvas-hint');
     if (hint) hint.remove();
+  }
+
+  private setupCommandPalette(): void {
+    const commands = createDefaultCommands({
+      onNewProject: () => this.newProject(),
+      onSaveProject: () => this.saveProject(),
+      onOpenProject: () => this.loadProject(),
+      onExport: () => this.exportProject(),
+      onUndo: () => { this.model.undo(); this.render(); },
+      onRedo: () => { this.model.redo(); this.render(); },
+      onDelete: () => this.interaction.deleteSelected(),
+      onSelectAll: () => {
+        const nodes = this.model.getNodes();
+        nodes.forEach(n => this.interaction.getSelectedNodeIds().push(n.id));
+        this.render();
+      },
+      onFitView: () => this.fitView(),
+      onResetView: () => { this.renderer.getViewport().reset(); this.render(); },
+      onAddDialogue: () => this.addNodeAtCenter('dialogueFragment'),
+      onAddBranch: () => this.addNodeAtCenter('branch'),
+      onAddCondition: () => this.addNodeAtCenter('condition'),
+      onShowHelp: () => this.welcomeOverlay.show(),
+      onShowProjects: () => this.projectManager.showProjectBrowser()
+    });
+    this.commandPalette.setCommands(commands);
+  }
+
+  private addNodeAtCenter(nodeType: NodeType): void {
+    const canvas = document.getElementById('canvas-container');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const centerScreen = { x: rect.width / 2, y: rect.height / 2 };
+    const worldPos = this.renderer.getViewport().toWorldCoords(centerScreen);
+    this.interaction.addNode(nodeType, worldPos);
+    this.hideCanvasHint();
   }
 
   private setupToolbar(): void {
@@ -611,23 +631,27 @@ class DialogueEditor {
       if (node) {
         this.propertiesPanel.showNode(node);
         this.propertiesPanel.setCharacters(this.model.getCharacters());
+        // Trigger coachmark for properties panel
+        this.coachmarks.trigger('node-selected');
+
+        // Show floating toolbar near selected node
+        const screenPos = this.renderer.getViewport().toScreenCoords(node.position);
+        const canvasRect = this.canvas.getBoundingClientRect();
+        this.floatingToolbar.show(node, {
+          x: canvasRect.left + screenPos.x + (node.size?.width || 200) / 2,
+          y: canvasRect.top + screenPos.y
+        });
       }
     } else {
       this.propertiesPanel.clear();
+      this.floatingToolbar.hide();
     }
   }
 
   private onNodeDoubleClick(node: Node): void {
-    // Focus on the text input for dialogue nodes
+    // Show inline editor for dialogue nodes (Figma-style double-click to edit)
     if (node.nodeType === 'dialogue' || node.nodeType === 'dialogueFragment') {
-      this.propertiesPanel.showNode(node);
-      setTimeout(() => {
-        const textInput = document.getElementById('prop-text') as HTMLTextAreaElement;
-        if (textInput) {
-          textInput.focus();
-          textInput.select();
-        }
-      }, 50);
+      this.showInlineEditor(node);
     }
   }
 
@@ -656,6 +680,131 @@ class DialogueEditor {
   private onNodeCreated(node: Node): void {
     this.updateStatusBar();
     this.statusBar.setMessage(`Created ${node.nodeType} node`, 2000);
+    
+    // Hide the canvas hint when a node is created
+    this.hideCanvasHint();
+    
+    // Trigger coachmarks for node creation
+    this.coachmarks.trigger('node-created');
+    if (node.nodeType === 'branch') {
+      this.coachmarks.trigger('branch-created');
+    }
+
+    // Update inline editor characters list
+    this.inlineEditor.setCharacters(this.model.getCharacters());
+    
+    // Auto-open inline editor for dialogue nodes (better UX)
+    if (node.nodeType === 'dialogue' || node.nodeType === 'dialogueFragment') {
+      // Small delay to ensure node is rendered first
+      requestAnimationFrame(() => {
+        this.showInlineEditor(node);
+      });
+    }
+    
+    // Auto-save project
+    this.autoSaveProject();
+  }
+
+  // ==================== INLINE EDITOR & FLOATING TOOLBAR ====================
+
+  private showInlineEditor(node: Node): void {
+    if (node.nodeType !== 'dialogue' && node.nodeType !== 'dialogueFragment') {
+      return;
+    }
+
+    const screenPos = this.renderer.getViewport().toScreenCoords(node.position);
+    const canvasRect = this.canvas.getBoundingClientRect();
+    
+    // Center on node
+    const centerX = screenPos.x + (node.size?.width || 200) / 2;
+    const centerY = screenPos.y + (node.size?.height || 100) / 2;
+
+    this.inlineEditor.setCharacters(this.model.getCharacters());
+    this.inlineEditor.show(node, { x: centerX, y: centerY }, canvasRect);
+    this.floatingToolbar.hide();
+  }
+
+  private onInlineTextChange(nodeId: string, text: string): void {
+    const node = this.model.getNode(nodeId);
+    if (!node) return;
+
+    if (node.nodeType === 'dialogue' || node.nodeType === 'dialogueFragment') {
+      const data = node.data as { type: 'dialogue' | 'dialogueFragment'; data: { speaker?: string; text: string; menuText?: string; stageDirections?: string; autoTransition: boolean } };
+      this.model.updateNodeData(nodeId, {
+        data: {
+          type: node.nodeType as 'dialogue' | 'dialogueFragment',
+          data: { ...data.data, text }
+        }
+      });
+      this.render();
+    }
+  }
+
+  private onInlineSpeakerChange(nodeId: string, speakerId: string): void {
+    const node = this.model.getNode(nodeId);
+    if (!node) return;
+
+    if (node.nodeType === 'dialogue' || node.nodeType === 'dialogueFragment') {
+      const data = node.data as { type: 'dialogue' | 'dialogueFragment'; data: { speaker?: string; text: string; autoTransition: boolean } };
+      this.model.updateNodeData(nodeId, {
+        data: {
+          type: node.nodeType as 'dialogue' | 'dialogueFragment',
+          data: { ...data.data, speaker: speakerId }
+        }
+      });
+      this.render();
+    }
+  }
+
+  private createNodeAfter(sourceNodeId: string, nodeType: NodeType): void {
+    const sourceNode = this.model.getNode(sourceNodeId);
+    if (!sourceNode) return;
+
+    // Position new node to the right of source
+    const newPos = {
+      x: sourceNode.position.x + (sourceNode.size?.width || 200) + 100,
+      y: sourceNode.position.y
+    };
+
+    const newNode = this.model.addNode(nodeType, newPos);
+
+    // Connect source to new node
+    this.model.addConnection(sourceNodeId, 0, newNode.id, 0);
+
+    // Select new node
+    this.interaction.addNode(nodeType, newPos);
+
+    // If dialogue, inherit speaker from source
+    if ((nodeType === 'dialogue' || nodeType === 'dialogueFragment') && 
+        (sourceNode.nodeType === 'dialogue' || sourceNode.nodeType === 'dialogueFragment')) {
+      const sourceData = sourceNode.data as { type: string; data: { speaker?: string } };
+      if (sourceData.data.speaker) {
+        this.model.updateNodeData(newNode.id, {
+          data: {
+            type: nodeType as 'dialogue' | 'dialogueFragment',
+            data: { speaker: sourceData.data.speaker, text: '', autoTransition: false }
+          }
+        });
+      }
+    }
+
+    this.render();
+    
+    // Show inline editor on new node
+    setTimeout(() => {
+      const createdNode = this.model.getNode(newNode.id);
+      if (createdNode) {
+        this.showInlineEditor(createdNode);
+      }
+    }, 50);
+  }
+
+  private showColorPicker(node: Node): void {
+    const color = prompt('Enter hex color (e.g. #3b82f6):', node.color || '#3b82f6');
+    if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+      this.model.updateNodeData(node.id, { color });
+      this.render();
+    }
   }
 
   private onConnectionCreated(): void {

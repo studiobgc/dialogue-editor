@@ -1,8 +1,9 @@
 /**
- * Renders nodes on the canvas
+ * Renders nodes on the canvas - Articy Draft style
+ * Clean, flat design with solid color headers and clear typography
  */
 
-import { Node, NodeType, Position } from '../types/graph';
+import { Node, Position } from '../types/graph';
 import { NODE_CONFIGS } from '../core/NodeFactory';
 import { Viewport } from './Viewport';
 
@@ -11,6 +12,7 @@ export interface NodeRenderStyle {
   borderColor: string;
   borderWidth: number;
   textColor: string;
+  textSecondary: string;
   selectedBorderColor: string;
   hoveredBorderColor: string;
   portRadius: number;
@@ -23,21 +25,23 @@ export interface NodeRenderStyle {
   titleFontSize: number;
 }
 
+// Articy-inspired dark theme
 const DEFAULT_STYLE: NodeRenderStyle = {
-  backgroundColor: '#2a2a3e',
-  borderColor: '#4a4a6a',
-  borderWidth: 2,
-  textColor: '#e4e4ef',
-  selectedBorderColor: '#7c3aed',
-  hoveredBorderColor: '#a78bfa',
-  portRadius: 7,
-  portColor: '#6b7280',
-  portConnectedColor: '#7ed321',
-  cornerRadius: 10,
-  headerHeight: 30,
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  backgroundColor: '#2d2d30',      // VS Code dark gray
+  borderColor: '#3e3e42',          // Subtle border
+  borderWidth: 1,
+  textColor: '#cccccc',            // Light gray text
+  textSecondary: '#858585',        // Dimmed text
+  selectedBorderColor: '#007acc',  // VS Code blue
+  hoveredBorderColor: '#505050',   // Subtle hover
+  portRadius: 6,                   // Slightly larger ports
+  portColor: '#858585',
+  portConnectedColor: '#4ec9b0',   // Teal for connected
+  cornerRadius: 3,                 // Articy uses very slight rounding
+  headerHeight: 26,                // Compact header like Articy
+  fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif',
   fontSize: 12,
-  titleFontSize: 13
+  titleFontSize: 12
 };
 
 export class NodeRenderer {
@@ -56,7 +60,8 @@ export class NodeRenderer {
   }
 
   /**
-   * Render a node
+   * Render a node - Articy Draft style
+   * Clean flat design with solid color header bar
    */
   renderNode(
     ctx: CanvasRenderingContext2D,
@@ -68,169 +73,125 @@ export class NodeRenderer {
     const { x, y } = node.position;
     const { width, height } = node.size;
 
-    // Skip if not visible
+    if (!width || !height || width <= 0 || height <= 0) return;
     if (!viewport.isRectVisible(x, y, width, height)) return;
 
     const config = NODE_CONFIGS[node.nodeType];
     const nodeColor = node.color || config.color;
 
-    // Draw shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 4;
+    ctx.save();
 
-    // Draw node body
+    // === SHADOW (subtle, Articy-style) ===
+    if (isSelected) {
+      ctx.shadowColor = 'rgba(0, 122, 204, 0.5)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 2;
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetY = 2;
+    }
+
+    // === NODE BODY ===
     ctx.fillStyle = this.style.backgroundColor;
     this.roundRect(ctx, x, y, width, height, this.style.cornerRadius);
     ctx.fill();
 
-    // Reset shadow
+    // Reset shadow for rest of drawing
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-    // Draw header
+    // === HEADER BAR (solid color like Articy) ===
     ctx.fillStyle = nodeColor;
     this.roundRectTop(ctx, x, y, width, this.style.headerHeight, this.style.cornerRadius);
     ctx.fill();
 
-    // Draw border
-    ctx.strokeStyle = isSelected 
-      ? this.style.selectedBorderColor 
-      : isHovered 
-        ? this.style.hoveredBorderColor 
-        : this.style.borderColor;
-    ctx.lineWidth = isSelected ? 3 : this.style.borderWidth;
+    // === BORDER ===
+    if (isSelected) {
+      ctx.strokeStyle = this.style.selectedBorderColor;
+      ctx.lineWidth = 2;
+    } else if (isHovered) {
+      ctx.strokeStyle = this.style.hoveredBorderColor;
+      ctx.lineWidth = 1;
+    } else {
+      ctx.strokeStyle = this.style.borderColor;
+      ctx.lineWidth = 1;
+    }
     this.roundRect(ctx, x, y, width, height, this.style.cornerRadius);
     ctx.stroke();
 
-    // Draw node type icon
-    this.drawNodeIcon(ctx, node.nodeType, x + 8, y + 6, 16);
-
-    // Draw title
+    // === HEADER TEXT (node type) ===
     ctx.fillStyle = '#ffffff';
     ctx.font = `600 ${this.style.titleFontSize}px ${this.style.fontFamily}`;
     ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
     const title = this.getNodeTitle(node);
-    const maxTitleWidth = width - 40;
-    const truncatedTitle = this.truncateText(ctx, title, maxTitleWidth);
-    ctx.fillText(truncatedTitle, x + 28, y + this.style.headerHeight / 2);
+    ctx.fillText(title, x + 10, y + this.style.headerHeight / 2);
 
-    // Draw content based on node type
+    // === CONTENT AREA ===
     this.drawNodeContent(ctx, node, x, y + this.style.headerHeight, width, height - this.style.headerHeight);
 
-    // Draw ports
-    this.drawPorts(ctx, node, isHovered);
+    ctx.restore();
+
+    // === PORTS (drawn outside save/restore for crisp rendering) ===
+    this.drawPorts(ctx, node, isHovered || isSelected);
   }
 
   /**
-   * Draw input and output ports
+   * Draw input and output ports - Articy style (simple clean circles)
    */
-  private drawPorts(ctx: CanvasRenderingContext2D, node: Node, isHovered: boolean): void {
+  private drawPorts(ctx: CanvasRenderingContext2D, node: Node, isActive: boolean): void {
     const { x, y } = node.position;
     const { width, height } = node.size;
+    const r = this.style.portRadius;
 
-    // Input ports (left side)
+    // Input ports (left side) - Articy positions them at node edge
     const inputSpacing = height / (node.inputPorts.length + 1);
     node.inputPorts.forEach((port, i) => {
-      const portY = y + inputSpacing * (i + 1);
+      const py = y + inputSpacing * (i + 1);
       const isConnected = this.connectedPorts.has(port.id);
-      const portRadius = isHovered ? this.style.portRadius + 1 : this.style.portRadius;
       
-      // Outer glow for connected ports
-      if (isConnected) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(126, 211, 33, 0.5)';
-        ctx.shadowBlur = 8;
-      }
-      
-      // Port background
+      // Port circle
       ctx.beginPath();
-      ctx.arc(x, portY, portRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isConnected ? this.style.portConnectedColor : 
-                      isHovered ? '#8b9199' : this.style.portColor;
-      ctx.fill();
+      ctx.arc(x, py, r, 0, Math.PI * 2);
       
       if (isConnected) {
-        ctx.restore();
-      }
-      
-      // Port border
-      ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.7)';
-      ctx.lineWidth = isHovered ? 2 : 1.5;
-      ctx.stroke();
-      
-      // Inner highlight
-      if (isHovered && !isConnected) {
-        ctx.beginPath();
-        ctx.arc(x, portY, portRadius - 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillStyle = this.style.portConnectedColor;
         ctx.fill();
-      }
-
-      // Draw port label if hovered or always for labeled ports
-      if (port.label) {
-        ctx.fillStyle = isHovered ? '#ffffff' : this.style.textColor;
-        ctx.font = `${isHovered ? '600 ' : ''}11px ${this.style.fontFamily}`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(port.label, x + portRadius + 8, portY);
+      } else {
+        ctx.fillStyle = this.style.backgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = isActive ? '#ffffff' : this.style.portColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
     });
 
     // Output ports (right side)
     const outputSpacing = height / (node.outputPorts.length + 1);
     node.outputPorts.forEach((port, i) => {
-      const portY = y + outputSpacing * (i + 1);
+      const py = y + outputSpacing * (i + 1);
       const isConnected = this.connectedPorts.has(port.id);
-      const portRadius = isHovered ? this.style.portRadius + 1 : this.style.portRadius;
       
-      // Outer glow for connected ports
-      if (isConnected) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(126, 211, 33, 0.5)';
-        ctx.shadowBlur = 8;
-      }
-      
-      // Port background
       ctx.beginPath();
-      ctx.arc(x + width, portY, portRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isConnected ? this.style.portConnectedColor : 
-                      isHovered ? '#8b9199' : this.style.portColor;
-      ctx.fill();
+      ctx.arc(x + width, py, r, 0, Math.PI * 2);
       
       if (isConnected) {
-        ctx.restore();
-      }
-      
-      // Port border
-      ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.7)';
-      ctx.lineWidth = isHovered ? 2 : 1.5;
-      ctx.stroke();
-      
-      // Inner highlight
-      if (isHovered && !isConnected) {
-        ctx.beginPath();
-        ctx.arc(x + width, portY, portRadius - 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillStyle = this.style.portConnectedColor;
         ctx.fill();
-      }
-
-      // Draw port label - always show for output ports with labels
-      if (port.label) {
-        ctx.fillStyle = isHovered ? '#ffffff' : this.style.textColor;
-        ctx.font = `${isHovered ? '600 ' : ''}11px ${this.style.fontFamily}`;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(port.label, x + width - portRadius - 8, portY);
+      } else {
+        ctx.fillStyle = this.style.backgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = isActive ? '#ffffff' : this.style.portColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
     });
   }
 
   /**
-   * Draw node-specific content
+   * Draw node-specific content - Articy style with clean typography
    */
   private drawNodeContent(
     ctx: CanvasRenderingContext2D,
@@ -238,110 +199,97 @@ export class NodeRenderer {
     x: number,
     y: number,
     width: number,
-    height: number
+    _height: number
   ): void {
-    ctx.fillStyle = this.style.textColor;
-    ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
+    const pad = 10;
+    const tx = x + pad;
+    const ty = y + 6;
+    const maxW = width - pad * 2;
+    const lh = 15; // line height
+
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-
-    const padding = 10;
-    const textX = x + padding;
-    const textY = y + 8;
-    const maxWidth = width - padding * 2;
-    const lineHeight = 16;
 
     switch (node.nodeType) {
       case 'dialogue':
       case 'dialogueFragment': {
         const data = node.data as { type: string; data: { speaker?: string; text: string } };
+        const speaker = data.data.speaker;
+        const text = data.data.text;
         
-        // Draw speaker
-        if (data.data.speaker) {
-          ctx.fillStyle = '#a78bfa';
-          ctx.font = `600 ${this.style.fontSize}px ${this.style.fontFamily}`;
-          ctx.fillText(data.data.speaker + ':', textX, textY);
+        // Speaker name in accent color
+        if (speaker) {
+          ctx.fillStyle = '#569cd6'; // Blue like Articy
+          ctx.font = `bold ${this.style.fontSize}px ${this.style.fontFamily}`;
+          ctx.fillText(speaker, tx, ty);
         }
         
-        // Draw text preview
-        if (data.data.text) {
+        // Dialogue text
+        if (text) {
           ctx.fillStyle = this.style.textColor;
           ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
-          const lines = this.wrapText(ctx, data.data.text, maxWidth, 3);
+          const lines = this.wrapText(ctx, text, maxW, 3);
+          const startY = speaker ? ty + lh : ty;
           lines.forEach((line, i) => {
-            ctx.fillText(line, textX, textY + lineHeight * (i + 1));
+            ctx.fillText(line, tx, startY + lh * i);
           });
+        } else {
+          // Placeholder
+          ctx.fillStyle = this.style.textSecondary;
+          ctx.font = `italic ${this.style.fontSize}px ${this.style.fontFamily}`;
+          ctx.fillText('Double-click to edit...', tx, speaker ? ty + lh : ty);
         }
         break;
       }
 
       case 'condition': {
         const data = node.data as { type: 'condition'; data: { script: { expression: string } } };
-        ctx.fillStyle = '#10b981';
-        ctx.font = `italic ${this.style.fontSize}px "SF Mono", "Fira Code", monospace`;
-        const expr = data.data.script.expression || '(empty condition)';
-        ctx.fillText(this.truncateText(ctx, expr, maxWidth), textX, textY);
+        ctx.fillStyle = '#4ec9b0'; // Teal for code
+        ctx.font = `${this.style.fontSize}px "Consolas", "SF Mono", monospace`;
+        const expr = data.data.script.expression || 'if (condition)';
+        ctx.fillText(this.truncateText(ctx, expr, maxW), tx, ty);
         break;
       }
 
       case 'instruction': {
         const data = node.data as { type: 'instruction'; data: { script: { expression: string } } };
-        ctx.fillStyle = '#8b5cf6';
-        ctx.font = `italic ${this.style.fontSize}px "SF Mono", "Fira Code", monospace`;
-        const expr = data.data.script.expression || '(empty instruction)';
-        ctx.fillText(this.truncateText(ctx, expr, maxWidth), textX, textY);
+        ctx.fillStyle = '#dcdcaa'; // Yellow for instructions
+        ctx.font = `${this.style.fontSize}px "Consolas", "SF Mono", monospace`;
+        const expr = data.data.script.expression || 'action()';
+        ctx.fillText(this.truncateText(ctx, expr, maxW), tx, ty);
         break;
       }
 
       case 'jump': {
         const data = node.data as { type: 'jump'; data: { targetNodeId?: string } };
-        ctx.fillStyle = '#f59e0b';
-        const target = data.data.targetNodeId ? `→ ${data.data.targetNodeId.substring(0, 12)}...` : '(no target)';
-        ctx.fillText(target, textX, textY);
+        ctx.fillStyle = this.style.textSecondary;
+        ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
+        const target = data.data.targetNodeId ? `→ ${data.data.targetNodeId.substring(0, 16)}` : '(no target)';
+        ctx.fillText(target, tx, ty);
         break;
       }
 
       case 'hub': {
-        ctx.fillStyle = '#06b6d4';
+        ctx.fillStyle = this.style.textSecondary;
+        ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
         ctx.textAlign = 'center';
-        ctx.fillText('⋮', x + width / 2, textY);
+        ctx.fillText('Hub', x + width / 2, ty);
         break;
       }
 
       case 'flowFragment': {
         const data = node.data as { type: 'flowFragment'; data: { displayName: string; text?: string } };
-        ctx.fillStyle = this.style.textColor;
         if (data.data.text) {
-          const lines = this.wrapText(ctx, data.data.text, maxWidth, 4);
+          ctx.fillStyle = this.style.textColor;
+          ctx.font = `${this.style.fontSize}px ${this.style.fontFamily}`;
+          const lines = this.wrapText(ctx, data.data.text, maxW, 4);
           lines.forEach((line, i) => {
-            ctx.fillText(line, textX, textY + lineHeight * i);
+            ctx.fillText(line, tx, ty + lh * i);
           });
         }
         break;
       }
     }
-  }
-
-  /**
-   * Draw a node type icon
-   */
-  private drawNodeIcon(ctx: CanvasRenderingContext2D, nodeType: NodeType, x: number, y: number, size: number): void {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `${size - 2}px ${this.style.fontFamily}`;
-    ctx.textBaseline = 'top';
-    
-    const icons: Record<NodeType, string> = {
-      dialogue: '💬',
-      dialogueFragment: '💭',
-      branch: '⑂',
-      condition: '?',
-      instruction: '⚡',
-      hub: '◉',
-      jump: '↗',
-      flowFragment: '▣'
-    };
-    
-    ctx.fillText(icons[nodeType] || '■', x, y);
   }
 
   /**

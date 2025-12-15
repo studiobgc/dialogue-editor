@@ -22,9 +22,9 @@ export interface GridStyle {
 const DEFAULT_GRID_STYLE: GridStyle = {
   minorGridSize: 20,
   majorGridSize: 100,
-  minorGridColor: '#2a2a3e',
-  majorGridColor: '#363652',
-  backgroundColor: '#1e1e2e'
+  minorGridColor: '#313244', // Surface0
+  majorGridColor: '#45475a', // Surface1
+  backgroundColor: '#11111b' // Crust (Deepest dark)
 };
 
 export class GraphRenderer {
@@ -34,6 +34,7 @@ export class GraphRenderer {
   private nodeRenderer: NodeRenderer;
   private connectionRenderer: ConnectionRenderer;
   private gridStyle: GridStyle;
+  private dpr: number = 1;
   
   // Performance optimizations
   private renderLoop: RenderLoop;
@@ -49,6 +50,7 @@ export class GraphRenderer {
   
   private connectionPreview: { from: Position; to: Position; isValid: boolean } | null = null;
   private selectionBox: { start: Position; end: Position } | null = null;
+  private alignmentGuides: { type: 'h' | 'v'; pos: number }[] = [];
 
   private needsRender = true;
   
@@ -74,6 +76,9 @@ export class GraphRenderer {
     this.setupCanvas();
     this.startRenderLoop();
     
+    // Initialize viewport to show origin in visible area
+    this.viewport.reset();
+    
     // Track render stats
     this.renderLoop.onStats((stats) => {
       this.renderStats = stats;
@@ -84,15 +89,15 @@ export class GraphRenderer {
    * Setup canvas for high DPI displays
    */
   private setupCanvas(): void {
-    const dpr = window.devicePixelRatio || 1;
+    this.dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    this.canvas.width = rect.width * this.dpr;
+    this.canvas.height = rect.height * this.dpr;
     this.canvas.style.width = `${rect.width}px`;
     this.canvas.style.height = `${rect.height}px`;
     
-    this.ctx.scale(dpr, dpr);
+    // Don't use ctx.scale() here - we'll incorporate DPR into the viewport transform
     this.viewport.setSize(rect.width, rect.height);
   }
 
@@ -102,6 +107,24 @@ export class GraphRenderer {
   resize(): void {
     this.setupCanvas();
     this.requestRender();
+  }
+
+  /**
+   * Apply viewport transform with DPR scaling
+   * This combines DPR scaling with viewport pan/zoom in a single transform
+   */
+  private applyViewportTransform(): void {
+    const zoom = this.viewport.getZoom();
+    const pan = this.viewport.getPan();
+    // Combine DPR scaling with viewport transform
+    this.ctx.setTransform(
+      this.dpr * zoom,
+      0,
+      0,
+      this.dpr * zoom,
+      this.dpr * pan.x,
+      this.dpr * pan.y
+    );
   }
 
   /**
@@ -161,6 +184,11 @@ export class GraphRenderer {
     } else {
       this.selectionBox = null;
     }
+    this.requestRender();
+  }
+
+  setAlignmentGuides(guides: { type: 'h' | 'v'; pos: number }[]): void {
+    this.alignmentGuides = guides;
     this.requestRender();
   }
 
@@ -244,15 +272,18 @@ export class GraphRenderer {
     // Get visible bounds for culling
     const visibleBounds = this.viewport.getVisibleBounds();
 
-    // Clear canvas with optimized clear
+    // Clear canvas with optimized clear (use CSS dimensions, not canvas pixel dimensions)
+    const cssWidth = this.canvas.width / this.dpr;
+    const cssHeight = this.canvas.height / this.dpr;
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.ctx.fillStyle = this.gridStyle.backgroundColor;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, cssWidth, cssHeight);
 
     // Save context state
     this.ctx.save();
 
-    // Apply viewport transform
-    this.viewport.applyTransform(this.ctx);
+    // Apply viewport transform with DPR scaling
+    this.applyViewportTransform();
 
     // Draw grid (skip if zoomed out too far)
     this.drawGrid();
@@ -325,8 +356,83 @@ export class GraphRenderer {
       this.drawSelectionBox();
     }
 
+    // Draw alignment guides (Figma-style red lines)
+    if (this.alignmentGuides.length > 0) {
+      this.drawAlignmentGuides();
+    }
+
+    // Draw empty state guidance (Articy-style onboarding)
+    if (nodes.length === 0) {
+      this.drawEmptyStateGuidance();
+    }
+
     // Restore context state
     this.ctx.restore();
+  }
+
+  /**
+   * Draw empty canvas guidance - helps new users get started quickly
+   */
+  private drawEmptyStateGuidance(): void {
+    const zoom = this.viewport.getZoom();
+    const bounds = this.viewport.getVisibleBounds();
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    
+    // Scale text inversely with zoom so it stays readable
+    const fontSize = 14 / zoom;
+    const smallFontSize = 12 / zoom;
+    
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    
+    // Main message
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    this.ctx.font = `600 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+    this.ctx.fillText('Press a key to create a node', centerX, centerY - 40 / zoom);
+    
+    // Keyboard shortcuts
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    this.ctx.font = `${smallFontSize}px "Segoe UI", system-ui, sans-serif`;
+    
+    const shortcuts = [
+      'D = Dialogue   F = Fragment   B = Branch',
+      'C = Condition   I = Instruction   H = Hub',
+      '',
+      'Or drag from the palette on the left'
+    ];
+    
+    shortcuts.forEach((line, i) => {
+      this.ctx.fillText(line, centerX, centerY + (i * 20) / zoom);
+    });
+  }
+
+  /**
+   * Draw alignment guides (Figma-style magenta/red lines)
+   */
+  private drawAlignmentGuides(): void {
+    const bounds = this.viewport.getVisibleBounds();
+    const zoom = this.viewport.getZoom();
+    
+    this.ctx.strokeStyle = '#ff4081'; // Magenta/pink like Figma
+    this.ctx.lineWidth = 1 / zoom;
+    this.ctx.setLineDash([4 / zoom, 4 / zoom]);
+
+    for (const guide of this.alignmentGuides) {
+      this.ctx.beginPath();
+      if (guide.type === 'v') {
+        // Vertical line
+        this.ctx.moveTo(guide.pos, bounds.minY);
+        this.ctx.lineTo(guide.pos, bounds.maxY);
+      } else {
+        // Horizontal line
+        this.ctx.moveTo(bounds.minX, guide.pos);
+        this.ctx.lineTo(bounds.maxX, guide.pos);
+      }
+      this.ctx.stroke();
+    }
+
+    this.ctx.setLineDash([]);
   }
 
   /**
@@ -412,16 +518,19 @@ export class GraphRenderer {
     const width = Math.abs(end.x - start.x);
     const height = Math.abs(end.y - start.y);
 
-    // Fill
-    this.ctx.fillStyle = 'rgba(124, 58, 237, 0.1)';
+    // Fill with subtle mauve
+    this.ctx.fillStyle = 'rgba(203, 166, 247, 0.1)'; // Mauve with low opacity
     this.ctx.fillRect(x, y, width, height);
 
     // Border
-    this.ctx.strokeStyle = '#7c3aed';
+    this.ctx.strokeStyle = '#cba6f7'; // Mauve
     this.ctx.lineWidth = 1 / this.viewport.getZoom();
-    this.ctx.setLineDash([5 / this.viewport.getZoom(), 3 / this.viewport.getZoom()]);
+    
+    // Crisp solid border usually looks better in high fidelity than dashed for selection *area*
+    // but Figma uses thin solid line. Articy uses dashed.
+    // Let's go with a very thin solid line for a modern feel, or keep dashed if preferred.
+    // Figma's selection rect is actually solid thin line.
     this.ctx.strokeRect(x, y, width, height);
-    this.ctx.setLineDash([]);
   }
 
   // ==================== HIT TESTING ====================

@@ -246,12 +246,28 @@ export class PropertiesPanel {
 
     const node = this.currentNode;
 
+    // Helper to add Enter key support to inputs
+    const addEnterKeySupport = (input: HTMLInputElement | HTMLTextAreaElement, callback: () => void) => {
+      input.addEventListener('keydown', (evt) => {
+        const e = evt as KeyboardEvent;
+        if (e.key === 'Enter' && !e.shiftKey) {
+          // For textareas, only trigger on Cmd/Ctrl+Enter
+          if (input instanceof HTMLTextAreaElement && !(e.metaKey || e.ctrlKey)) {
+            return;
+          }
+          e.preventDefault();
+          callback();
+          input.blur();
+        }
+      });
+    };
+
     // Technical name
     const techNameInput = document.getElementById('prop-technicalName') as HTMLInputElement;
     if (techNameInput) {
-      techNameInput.addEventListener('change', () => {
-        this.onChange(node.id, 'technicalName', techNameInput.value);
-      });
+      const updateTechName = () => this.onChange(node.id, 'technicalName', techNameInput.value);
+      techNameInput.addEventListener('change', updateTechName);
+      addEnterKeySupport(techNameInput, updateTechName);
     }
 
     // Position
@@ -266,6 +282,8 @@ export class PropertiesPanel {
       };
       posXInput.addEventListener('change', updatePosition);
       posYInput.addEventListener('change', updatePosition);
+      addEnterKeySupport(posXInput, updatePosition);
+      addEnterKeySupport(posYInput, updatePosition);
     }
 
     // Color

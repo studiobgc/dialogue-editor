@@ -6,6 +6,7 @@ import { Node, Position, NodeType, Connection } from '../types/graph';
 import { GraphModel } from '../core/GraphModel';
 import { GraphRenderer } from '../renderer/GraphRenderer';
 import { Viewport } from '../renderer/Viewport';
+import { QuickCreateMenu, QuickCreateOption } from '../ui/QuickCreateMenu';
 
 export interface DragState {
   type: 'none' | 'pan' | 'node' | 'selection' | 'connection';
@@ -52,6 +53,18 @@ export class InteractionManager {
   private inertiaAnimationId: number | null = null;
   private readonly friction = 0.92;
   private readonly minVelocity = 0.5;
+  
+  // Space+drag pan (Figma-style)
+  private isSpacePressed = false;
+
+  // Quick Create Menu for drag-to-create
+  private quickCreateMenu: QuickCreateMenu;
+  private pendingQuickCreate: {
+    sourceNodeId: string;
+    sourcePortIndex: number;
+    worldPos: Position;
+    screenPos: Position;
+  } | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -64,6 +77,9 @@ export class InteractionManager {
     this.renderer = renderer;
     this.viewport = renderer.getViewport();
     this.callbacks = callbacks || {};
+
+    // Initialize Quick Create Menu
+    this.quickCreateMenu = new QuickCreateMenu();
 
     this.setupEventListeners();
   }
@@ -81,6 +97,16 @@ export class InteractionManager {
 
     // Keyboard events
     window.addEventListener('keydown', this.onKeyDown.bind(this));
+    window.addEventListener('keyup', this.onKeyUp.bind(this));
+  }
+
+  private onKeyUp(e: KeyboardEvent): void {
+    if (e.code === 'Space') {
+      this.isSpacePressed = false;
+      if (this.dragState.type === 'none') {
+        this.canvas.style.cursor = 'default';
+      }
+    }
   }
 
   /**
@@ -100,8 +126,16 @@ export class InteractionManager {
     const screenPos = this.getScreenPos(e);
     const worldPos = this.viewport.toWorldCoords(screenPos);
 
-    // Middle mouse button = pan
-    if (e.button === 1) {
+    // Middle mouse button = pan (standard)
+    // Right mouse button = pan (Articy-style, more accessible)
+    if (e.button === 1 || e.button === 2) {
+      this.startPan(screenPos, worldPos);
+      e.preventDefault();
+      return;
+    }
+
+    // Space+click = pan (Figma-style)
+    if (e.button === 0 && this.isSpacePressed) {
       this.startPan(screenPos, worldPos);
       e.preventDefault();
       return;
@@ -197,6 +231,7 @@ export class InteractionManager {
     this.canvas.style.cursor = 'default';
     this.renderer.setConnectionPreview(null, null);
     this.renderer.setSelectionBox(null, null);
+    this.renderer.setAlignmentGuides([]); // Clear guides on drag end
   }
 
   private onWheel(e: WheelEvent): void {
@@ -204,13 +239,41 @@ export class InteractionManager {
 
     const screenPos = this.getScreenPos(e);
     
-    // Smooth zoom with momentum - smaller steps for smoother feel
-    const zoomIntensity = 0.002;
-    const delta = -e.deltaY * zoomIntensity;
-    const currentZoom = this.viewport.getZoom();
-    const newZoom = currentZoom * (1 + delta);
-
-    this.viewport.setZoom(newZoom, screenPos.x, screenPos.y);
+    // Figma-style: Ctrl/Cmd+scroll OR pinch = zoom, regular scroll = pan
+    const isZoom = e.ctrlKey || e.metaKey;
+    
+    if (isZoom) {
+      // === ZOOM (Figma-style: smooth exponential, cursor-anchored) ===
+      // Normalize delta: trackpads send small values, mice send larger
+      let delta = -e.deltaY;
+      if (e.deltaMode === 1) delta *= 16; // line mode
+      if (e.deltaMode === 2) delta *= 100; // page mode
+      
+      // Exponential zoom for smooth feel at all zoom levels
+      // Small multiplier for fine control
+      const zoomFactor = Math.exp(delta * 0.002);
+      const newZoom = this.viewport.getZoom() * zoomFactor;
+      
+      this.viewport.setZoom(newZoom, screenPos.x, screenPos.y);
+    } else {
+      // === PAN (1:1 screen pixels like Figma) ===
+      let dx = e.deltaX;
+      let dy = e.deltaY;
+      
+      // Shift+scroll = horizontal pan
+      if (dx === 0 && e.shiftKey) {
+        dx = dy;
+        dy = 0;
+      }
+      
+      // Normalize for line/page modes
+      if (e.deltaMode === 1) { dx *= 16; dy *= 16; }
+      if (e.deltaMode === 2) { dx *= 100; dy *= 100; }
+      
+      // Pan opposite to scroll direction (natural/Figma behavior)
+      this.viewport.pan(-dx, -dy);
+    }
+    
     this.renderer.requestRender();
     this.render();
   }
@@ -244,6 +307,14 @@ export class InteractionManager {
   private onKeyDown(e: KeyboardEvent): void {
     // Don't handle if typing in an input
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Space = pan mode (Figma-style)
+    if (e.code === 'Space' && !this.isSpacePressed) {
+      this.isSpacePressed = true;
+      this.canvas.style.cursor = 'grab';
+      e.preventDefault();
       return;
     }
 
@@ -285,6 +356,90 @@ export class InteractionManager {
     if (e.key === 'Escape') {
       this.clearSelection();
     }
+
+    // === ZOOM SHORTCUTS ===
+    // Zoom in: + or =
+    if (e.key === '+' || e.key === '=' || (isMeta && e.key === '=')) {
+      this.viewport.zoomIn();
+      e.preventDefault();
+    }
+
+    // Zoom out: - or _
+    if (e.key === '-' || e.key === '_' || (isMeta && e.key === '-')) {
+      this.viewport.zoomOut();
+      e.preventDefault();
+    }
+
+    // Zoom to 100%: Cmd+1
+    if (isMeta && e.key === '1') {
+      this.viewport.zoomToActual();
+      e.preventDefault();
+    }
+
+    // Fit all content: Cmd+0
+    if (isMeta && e.key === '0') {
+      const nodes = this.model.getNodes();
+      if (nodes.length > 0) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const node of nodes) {
+          minX = Math.min(minX, node.position.x);
+          minY = Math.min(minY, node.position.y);
+          maxX = Math.max(maxX, node.position.x + node.size.width);
+          maxY = Math.max(maxY, node.position.y + node.size.height);
+        }
+        this.viewport.animateFitBounds(minX, minY, maxX, maxY);
+      }
+      e.preventDefault();
+    }
+
+    // === QUICK NODE CREATION (single key shortcuts) ===
+    // D = Dialogue, B = Branch, C = Condition, J = Jump, H = Hub
+    if (!isMeta && !e.shiftKey && !e.altKey) {
+      const nodeTypeMap: Record<string, NodeType> = {
+        'd': 'dialogue',
+        'f': 'dialogueFragment', 
+        'b': 'branch',
+        'c': 'condition',
+        'i': 'instruction',
+        'j': 'jump',
+        'h': 'hub'
+      };
+      
+      const nodeType = nodeTypeMap[e.key.toLowerCase()];
+      if (nodeType) {
+        this.createNodeAtViewportCenter(nodeType);
+        e.preventDefault();
+      }
+    }
+  }
+
+  /**
+   * Create a node at the center of the current viewport
+   */
+  private createNodeAtViewportCenter(nodeType: NodeType): void {
+    const bounds = this.viewport.getVisibleBounds();
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    
+    // Snap to grid
+    const GRID_SIZE = 20;
+    const x = Math.round(centerX / GRID_SIZE) * GRID_SIZE;
+    const y = Math.round(centerY / GRID_SIZE) * GRID_SIZE;
+    
+    const node = this.model.addNode(nodeType, { x, y });
+    
+    // Select the new node
+    this.selectedNodeIds.clear();
+    this.selectedNodeIds.add(node.id);
+    this.updateRendererSelection();
+    this.notifySelectionChanged();
+    
+    // Notify callback
+    if (this.callbacks.onNodeCreated) {
+      this.callbacks.onNodeCreated(node);
+    }
+    
+    this.render();
   }
 
   // ==================== DRAG HANDLERS ====================
@@ -413,13 +568,56 @@ export class InteractionManager {
     const dx = worldPos.x - this.dragState.startWorldPos.x;
     const dy = worldPos.y - this.dragState.startWorldPos.y;
 
+    // Get all nodes for alignment detection
+    const allNodes = this.model.getNodes();
+    const draggedNodeIds = new Set(this.dragState.nodeStartPositions.keys());
+    const otherNodes = allNodes.filter(n => !draggedNodeIds.has(n.id));
+
+    // Snap threshold and grid
+    const SNAP_THRESHOLD = 8;
+    const GRID_SIZE = 20;
+
+    // Collect alignment guides
+    const guides: { type: 'h' | 'v'; pos: number }[] = [];
+
     for (const [nodeId, startPos] of this.dragState.nodeStartPositions) {
-      this.model.updateNodePosition(nodeId, {
-        x: startPos.x + dx,
-        y: startPos.y + dy
-      });
+      const node = this.model.getNode(nodeId);
+      if (!node) continue;
+
+      let newX = startPos.x + dx;
+      let newY = startPos.y + dy;
+      const w = node.size.width;
+      const h = node.size.height;
+
+      // Smart alignment to other nodes (Figma-style)
+      for (const other of otherNodes) {
+        const ox = other.position.x;
+        const oy = other.position.y;
+        const ow = other.size.width;
+        const oh = other.size.height;
+
+        // Horizontal alignment (left, center, right edges)
+        if (Math.abs(newX - ox) < SNAP_THRESHOLD) { newX = ox; guides.push({ type: 'v', pos: ox }); }
+        if (Math.abs(newX + w - (ox + ow)) < SNAP_THRESHOLD) { newX = ox + ow - w; guides.push({ type: 'v', pos: ox + ow }); }
+        if (Math.abs((newX + w/2) - (ox + ow/2)) < SNAP_THRESHOLD) { newX = ox + ow/2 - w/2; guides.push({ type: 'v', pos: ox + ow/2 }); }
+
+        // Vertical alignment (top, center, bottom edges)
+        if (Math.abs(newY - oy) < SNAP_THRESHOLD) { newY = oy; guides.push({ type: 'h', pos: oy }); }
+        if (Math.abs(newY + h - (oy + oh)) < SNAP_THRESHOLD) { newY = oy + oh - h; guides.push({ type: 'h', pos: oy + oh }); }
+        if (Math.abs((newY + h/2) - (oy + oh/2)) < SNAP_THRESHOLD) { newY = oy + oh/2 - h/2; guides.push({ type: 'h', pos: oy + oh/2 }); }
+      }
+
+      // Fall back to grid snap if no alignment
+      if (guides.length === 0) {
+        newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+        newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+      }
+
+      this.model.updateNodePosition(nodeId, { x: newX, y: newY });
     }
 
+    // Show alignment guides
+    this.renderer.setAlignmentGuides(guides);
     this.render();
   }
 
@@ -552,9 +750,103 @@ export class InteractionManager {
           this.callbacks.onConnectionCreated(connection);
         }
       }
+    } else if (sourcePortType === 'output') {
+      // Dragged from output port into empty space - show Quick Create Menu!
+      // This is the "writers hate a blank page" feature
+      this.showQuickCreateMenu(sourceNodeId, sourcePortIndex, worldPos);
     }
 
     this.render();
+  }
+
+  /**
+   * Show the Quick Create Menu when dragging from a port into empty space
+   * "Writers hate a blank page" - this ensures you're always extending from something
+   */
+  private showQuickCreateMenu(sourceNodeId: string, sourcePortIndex: number, worldPos: Position): void {
+    const screenPos = this.viewport.toScreenCoords(worldPos);
+    const rect = this.canvas.getBoundingClientRect();
+
+    // Get the source node to determine last speaker
+    const sourceNode = this.model.getNode(sourceNodeId);
+    let lastSpeakerId: string | undefined;
+    
+    if (sourceNode && (sourceNode.nodeType === 'dialogue' || sourceNode.nodeType === 'dialogueFragment')) {
+      const data = sourceNode.data as { type: string; data: { speaker?: string } };
+      lastSpeakerId = data.data.speaker;
+    }
+
+    // Store pending state for when user makes selection
+    this.pendingQuickCreate = {
+      sourceNodeId,
+      sourcePortIndex,
+      worldPos,
+      screenPos: { x: rect.left + screenPos.x, y: rect.top + screenPos.y }
+    };
+
+    // Show the menu
+    this.quickCreateMenu.show({
+      position: { x: rect.left + screenPos.x, y: rect.top + screenPos.y },
+      sourceNodeId,
+      sourcePortIndex,
+      characters: this.model.getCharacters(),
+      lastSpeakerId,
+      onSelect: (option: QuickCreateOption) => this.handleQuickCreateSelection(option),
+      onCancel: () => this.handleQuickCreateCancel()
+    });
+  }
+
+  /**
+   * Handle selection from Quick Create Menu
+   */
+  private handleQuickCreateSelection(option: QuickCreateOption): void {
+    if (!this.pendingQuickCreate) return;
+
+    const { sourceNodeId, sourcePortIndex, worldPos } = this.pendingQuickCreate;
+
+    // Create the new node at the drop position
+    const newNode = this.model.addNode(option.type, {
+      x: worldPos.x,
+      y: worldPos.y - 40 // Offset slightly to position nicely
+    });
+
+    // Apply preset data if provided (e.g., pre-selected speaker)
+    if (option.preset?.speakerId && (newNode.nodeType === 'dialogue' || newNode.nodeType === 'dialogueFragment')) {
+      const data = newNode.data as { type: string; data: { speaker?: string; text: string } };
+      data.data.speaker = option.preset.speakerId;
+    }
+
+    // Create the connection from source to new node
+    const connection = this.model.addConnection(
+      sourceNodeId,
+      sourcePortIndex,
+      newNode.id,
+      0 // Connect to first input port
+    );
+
+    // Select the new node
+    this.selectedNodeIds.clear();
+    this.selectedNodeIds.add(newNode.id);
+    this.updateRendererSelection();
+    this.notifySelectionChanged();
+
+    // Notify callbacks
+    if (this.callbacks.onNodeCreated) {
+      this.callbacks.onNodeCreated(newNode);
+    }
+    if (connection && this.callbacks.onConnectionCreated) {
+      this.callbacks.onConnectionCreated(connection);
+    }
+
+    this.pendingQuickCreate = null;
+    this.render();
+  }
+
+  /**
+   * Handle cancellation of Quick Create Menu
+   */
+  private handleQuickCreateCancel(): void {
+    this.pendingQuickCreate = null;
   }
 
   // ==================== HOVER STATE ====================

@@ -18,14 +18,14 @@ export interface ConnectionRenderStyle {
 }
 
 const DEFAULT_STYLE: ConnectionRenderStyle = {
-  flowColor: '#7ed321',
-  dataColor: '#4a90e2',
-  selectedColor: '#7c3aed',
-  hoveredColor: '#a78bfa',
-  lineWidth: 2.5,
-  selectedLineWidth: 3.5,
-  arrowSize: 10,
-  curveTension: 0.6
+  flowColor: '#a6e3a1', // Soft green
+  dataColor: '#89b4fa', // Soft blue
+  selectedColor: '#cba6f7', // Soft purple
+  hoveredColor: '#f5c2e7', // Pink/light purple for hover
+  lineWidth: 2,
+  selectedLineWidth: 3,
+  arrowSize: 8,
+  curveTension: 0.5
 };
 
 export class ConnectionRenderer {
