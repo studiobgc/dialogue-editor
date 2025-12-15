@@ -23,7 +23,6 @@ import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/Bu
 import { MCPBridge } from './services/MCPBridge';
 import { FlowPreview } from './ui/FlowPreview';
 import { StatsPanel } from './ui/StatsPanel';
-import { toast } from './ui/Toast';
 
 class DialogueEditor {
   private model: GraphModel;
@@ -121,18 +120,15 @@ class DialogueEditor {
     this.mcpBridge.connect({
       onStatusChange: (connected: boolean) => {
         this.updateMCPIndicator(connected);
-        if (connected) {
-          toast.ai('Windsurf connected — I can edit your dialogue now');
-        }
+        // No toast - the indicator IS the feedback
       },
       onCommandExecuted: () => {
-        // Live reload: re-render the canvas when AI makes changes
+        // Live reload: the graph updating IS the feedback (GitHub principle)
         this.render();
-        toast.ai('Graph updated');
         this.pulseMCPIndicator();
       },
       onAutoSave: () => {
-        // Auto-save when AI makes changes
+        // Auto-save silently - success is self-evident
         this.autoSaveProject();
         this.showAutoSaveIndicator();
       }
@@ -420,7 +416,7 @@ class DialogueEditor {
       shortcut: '⌘S',
       onClick: () => {
         this.downloadProjectFile();
-        toast.save('Downloaded project file');
+        // No toast - the file download IS the feedback
       }
     });
 
