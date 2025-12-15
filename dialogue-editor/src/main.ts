@@ -23,6 +23,7 @@ import { BulkImporter, BulkDialogueImport, parseImportJSON } from './services/Bu
 import { MCPBridge } from './services/MCPBridge';
 import { FlowPreview } from './ui/FlowPreview';
 import { StatsPanel } from './ui/StatsPanel';
+import { toast } from './ui/Toast';
 
 class DialogueEditor {
   private model: GraphModel;
@@ -116,20 +117,24 @@ class DialogueEditor {
 
     // Initialize MCP Bridge for live AI editing through Windsurf
     this.mcpBridge = new MCPBridge(this.model);
+    this.setupMCPIndicator();
     this.mcpBridge.connect({
       onStatusChange: (connected: boolean) => {
+        this.updateMCPIndicator(connected);
         if (connected) {
-          this.statusBar.setMessage('🤖 AI Connected', 2000);
+          toast.ai('Windsurf connected — I can edit your dialogue now');
         }
       },
       onCommandExecuted: () => {
         // Live reload: re-render the canvas when AI makes changes
         this.render();
-        this.statusBar.setMessage('✨ AI updated graph', 1500);
+        toast.ai('Graph updated');
+        this.pulseMCPIndicator();
       },
       onAutoSave: () => {
         // Auto-save when AI makes changes
         this.autoSaveProject();
+        this.showAutoSaveIndicator();
       }
     });
 
@@ -245,6 +250,57 @@ class DialogueEditor {
     }
   }
 
+  // ==================== MCP VISUAL FEEDBACK ====================
+
+  private mcpIndicator: HTMLElement | null = null;
+  private autoSaveIndicator: HTMLElement | null = null;
+
+  private setupMCPIndicator(): void {
+    this.mcpIndicator = document.createElement('div');
+    this.mcpIndicator.className = 'mcp-indicator';
+    this.mcpIndicator.innerHTML = `
+      <span class="mcp-dot"></span>
+      <span class="mcp-label">Windsurf</span>
+    `;
+    document.body.appendChild(this.mcpIndicator);
+
+    // Auto-save indicator
+    this.autoSaveIndicator = document.createElement('div');
+    this.autoSaveIndicator.className = 'autosave-indicator';
+    this.autoSaveIndicator.innerHTML = `
+      <span class="autosave-dot"></span>
+      <span>Saved</span>
+    `;
+    document.body.appendChild(this.autoSaveIndicator);
+  }
+
+  private updateMCPIndicator(connected: boolean): void {
+    if (this.mcpIndicator) {
+      this.mcpIndicator.classList.toggle('connected', connected);
+      const label = this.mcpIndicator.querySelector('.mcp-label');
+      if (label) {
+        label.textContent = connected ? 'AI Connected' : 'Windsurf';
+      }
+    }
+  }
+
+  private pulseMCPIndicator(): void {
+    if (this.mcpIndicator) {
+      this.mcpIndicator.classList.remove('pulse');
+      void this.mcpIndicator.offsetWidth; // Force reflow
+      this.mcpIndicator.classList.add('pulse');
+    }
+  }
+
+  private showAutoSaveIndicator(): void {
+    if (this.autoSaveIndicator) {
+      this.autoSaveIndicator.classList.add('visible');
+      setTimeout(() => {
+        this.autoSaveIndicator?.classList.remove('visible');
+      }, 2000);
+    }
+  }
+
   private checkFirstLaunch(): void {
     const hasVisited = localStorage.getItem('dialogue-editor-visited');
     if (!hasVisited) {
@@ -308,7 +364,7 @@ class DialogueEditor {
   private setupCommandPalette(): void {
     const commands = createDefaultCommands({
       onNewProject: () => this.newProject(),
-      onSaveProject: () => this.saveProject(),
+      onSaveProject: () => this.downloadProjectFile(),
       onOpenProject: () => this.loadProject(),
       onExport: () => this.exportProject(),
       onUndo: () => { this.model.undo(); this.render(); },
@@ -358,17 +414,20 @@ class DialogueEditor {
     });
 
     this.toolbar.addAction({
-      id: 'save',
-      icon: '💾',
-      label: 'Save',
+      id: 'download',
+      icon: '⬇️',
+      label: 'Download .json',
       shortcut: '⌘S',
-      onClick: () => this.saveProject()
+      onClick: () => {
+        this.downloadProjectFile();
+        toast.save('Downloaded project file');
+      }
     });
 
     this.toolbar.addAction({
       id: 'load',
       icon: '📂',
-      label: 'Open',
+      label: 'Open .json',
       shortcut: '⌘O',
       onClick: () => this.loadProject()
     });
@@ -721,21 +780,16 @@ class DialogueEditor {
     }
   }
 
-  private async saveProject(): Promise<void> {
+  private downloadProjectFile(): void {
     try {
       const json = this.model.toJSON();
-      
-      // In Tauri, we'd use the file dialog
-      // For now, download as file
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${this.model.getGraph().technicalName}.dialogue.json`;
+      a.download = `${this.model.getGraph().technicalName || 'dialogue'}.dialogue.json`;
       a.click();
       URL.revokeObjectURL(url);
-      
-      this.statusBar.setMessage('Project saved', 2000);
     } catch (error) {
       console.error('Save error:', error);
       this.statusBar.setMessage('Save failed', 3000);
