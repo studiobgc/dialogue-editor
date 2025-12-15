@@ -1,23 +1,23 @@
 {
   "version": "1.0",
   "metadata": {
-    "title": "DINNER PARTY LABYRINTH — Act 1, Scene 1: The First Course",
-    "description": "Social combat roguelike. You are stuck in an endless apartment dinner party. Each room is a conversational trap. You fight by speaking.",
+    "title": "DINNER PARTY LABYRINTH — Act 1: The Arrival",
+    "description": "A social survival game. You've been invited to dinner at the Weissmans'. The invitation said 7:30. You arrived at 7:47. This will be discussed.",
     "author": "Studio BGC",
     "createdAt": "2025-12-14T20:00:00-05:00"
   },
   "characters": [
-    { "id": "char_p", "name": "YOU", "color": "#B8C0FF", "description": "The player. Trapped. Trying to leave without making it weird." },
-    { "id": "char_host", "name": "Mara", "color": "#E0E0E0", "description": "The host. Curates everything. Notices everything. Forgives nothing." },
-    { "id": "char_partner", "name": "Eli", "color": "#C7F9CC", "description": "Mara's partner. The enforcer dressed as warmth." },
-    { "id": "char_guest1", "name": "Dana", "color": "#FFD6A5", "description": "Another guest. Observes. Comments. Enjoys the friction." }
+    { "id": "char_p", "name": "YOU", "color": "#B8C0FF", "description": "You teach somewhere. You forget where when asked directly." },
+    { "id": "char_host", "name": "Mara", "color": "#E0E0E0", "description": "The hostess. Has opinions about butter temperatures. Will share them." },
+    { "id": "char_partner", "name": "Eli", "color": "#C7F9CC", "description": "Mara's husband. Restores vintage radios. Mentions it twice per conversation." },
+    { "id": "char_guest1", "name": "Dana", "color": "#FFD6A5", "description": "Works in something vague. Laughs before jokes end." }
   ],
   "variables": {
     "Game": {
       "tension": 0,
       "suspicion": 0,
       "rapport_mara": 0,
-      "roomMood": "polite"
+      "roomMood": "arriving"
     }
   },
   "acts": [
@@ -27,8 +27,8 @@
       "scenes": [
         {
           "id": "scene_1",
-          "name": "The First Course",
-          "location": "Mara and Eli's Apartment - Living Room",
+          "name": "The Entryway",
+          "location": "The Weissman Apartment - A brownstone with exposed brick that cost extra",
           "conversations": [
             {
               "id": "conv_1",
@@ -38,494 +38,834 @@
                 {
                   "id": "node_1",
                   "type": "instruction",
-                  "instruction": "Game.tension = 0; Game.suspicion = 0; Game.rapport_mara = 0; Game.roomMood = 'polite';",
+                  "instruction": "Game.tension = 0; Game.suspicion = 0; Game.rapport_mara = 0; Game.roomMood = 'arriving';",
                   "outputs": [{ "targetNodeId": "node_2" }]
                 },
                 {
                   "id": "node_2",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "You made it. I was starting to think you were going to do something dramatic. Like text.",
-                  "stageDirections": "[Mara's smile is warm. The warmth is a test.]",
+                  "text": "Oh! You found it. Some people have trouble with the— well. You found it.",
+                  "stageDirections": "[Mara is holding a wooden spoon. She does not put it down.]",
                   "outputs": [{ "targetNodeId": "node_3" }]
                 },
                 {
                   "id": "node_3",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Shoes off wherever you feel comfortable. We're not strict. We just notice.",
-                  "stageDirections": "[Eli gestures vaguely. The vagueness is deliberate.]",
+                  "text": "The buzzer's been— I keep meaning to— anyway. Shoes are optional. Most people do. Take them off, I mean. But optional.",
+                  "stageDirections": "[Eli is wearing socks with individual toes.]",
                   "outputs": [{ "targetNodeId": "node_4" }]
                 },
                 {
                   "id": "node_4",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "You have that look like you've already rehearsed an exit line.",
-                  "stageDirections": "[Dana sips something amber. Watching.]",
+                  "text": "I brought Sancerre. Mara said not to bring anything, so.",
+                  "stageDirections": "[Dana is already holding a glass of something that is not Sancerre.]",
                   "outputs": [{ "targetNodeId": "node_5" }]
                 },
                 {
                   "id": "node_5",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "That's so— I said— well. We'll open it. Eventually. Eli, take their— is that a jacket or a coat? I can never tell anymore.",
+                  "outputs": [{ "targetNodeId": "node_6" }]
+                },
+                {
+                  "id": "node_6",
                   "type": "hub",
                   "outputs": [
-                    { "label": "PERSUADE: Warm compliment, ask for air", "targetNodeId": "node_10" },
-                    { "label": "HONEST: Admit you might leave early", "targetNodeId": "node_20" },
-                    { "label": "FIGHT: Weaponized politeness", "targetNodeId": "node_30" },
-                    { "label": "STEALTH: Fake phone buzz, slip away", "targetNodeId": "node_40" }
+                    { "label": "It's a jacket. Sorry I'm late.", "targetNodeId": "node_10" },
+                    { "label": "Whatever you want it to be.", "targetNodeId": "node_20" },
+                    { "label": "I can hold it. I run cold.", "targetNodeId": "node_30" },
+                    { "label": "(Say nothing. Hand it over.)", "targetNodeId": "node_40" }
                   ]
                 },
-
                 {
                   "id": "node_10",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "This place looks incredible. Seriously. Can I step out for thirty seconds of air so I don't ruin it with my presence?",
-                  "stageDirections": "[You mean it. That's the dangerous part.]",
+                  "text": "It's a jacket. I'm sorry I'm late. The 6 train was— there was a thing.",
                   "outputs": [{ "targetNodeId": "node_11" }]
                 },
                 {
                   "id": "node_11",
-                  "type": "instruction",
-                  "instruction": "Game.rapport_mara = Game.rapport_mara + 1;",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "The 6? You took the 6? From— okay. That explains. I would have said take the— but you're here.",
                   "outputs": [{ "targetNodeId": "node_12" }]
                 },
                 {
                   "id": "node_12",
-                  "type": "condition",
-                  "condition": "Game.rapport_mara >= 2",
-                  "outputs": [
-                    { "label": "Success", "targetNodeId": "node_13" },
-                    { "label": "Fail", "targetNodeId": "node_15" }
-                  ]
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "I took a car. Is that bad? Mara made a face when I said car.",
+                  "outputs": [{ "targetNodeId": "node_13" }]
                 },
                 {
                   "id": "node_13",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Air is fine. Just don't come back calmer than the rest of us. It makes people feel judged.",
-                  "stageDirections": "[Permission granted. A door unlocks somewhere.]",
+                  "text": "I didn't make a— I just think if you live in a city— never mind. How are you? The teaching, you're still at— where is it again?",
                   "outputs": [{ "targetNodeId": "node_14" }]
                 },
                 {
                   "id": "node_14",
                   "type": "instruction",
-                  "instruction": "Game.roomMood = 'slightly_warm';",
-                  "outputs": [{ "targetNodeId": "node_90" }]
-                },
-                {
-                  "id": "node_15",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "Air is what people say when they mean escape. You can have air after the first course.",
-                  "stageDirections": "[The smile doesn't move. The eyes do.]",
-                  "outputs": [{ "targetNodeId": "node_16" }]
-                },
-                {
-                  "id": "node_16",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 1; Game.roomMood = 'managed';",
+                  "instruction": "Game.rapport_mara = Game.rapport_mara + 1;",
                   "outputs": [{ "targetNodeId": "node_60" }]
                 },
-
                 {
                   "id": "node_20",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "I'm happy to be here. I might have to bounce early though. Nothing personal.",
-                  "stageDirections": "[Honesty. The room tilts imperceptibly.]",
+                  "text": "It can be whatever you need it to be.",
                   "outputs": [{ "targetNodeId": "node_21" }]
                 },
                 {
                   "id": "node_21",
                   "type": "dialogueFragment",
-                  "speaker": "char_guest1",
-                  "text": "Nothing personal is always personal. It's like saying no offense.",
-                  "stageDirections": "[Dana's enjoying this.]",
+                  "speaker": "char_host",
+                  "text": "That's— ha. Eli, did you hear— okay. We're doing that kind of evening.",
                   "outputs": [{ "targetNodeId": "node_22" }]
                 },
                 {
                   "id": "node_22",
-                  "type": "condition",
-                  "condition": "Game.tension < 2",
-                  "outputs": [
-                    { "label": "Composed", "targetNodeId": "node_23" },
-                    { "label": "Fumbled", "targetNodeId": "node_26" }
-                  ]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "I had a coat once that could be either. Zip-off sleeves. German. I don't know what happened to it.",
+                  "outputs": [{ "targetNodeId": "node_23" }]
                 },
                 {
                   "id": "node_23",
                   "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "I'm saying it early so it doesn't turn into a scene later. I'm trying to be respectful.",
+                  "speaker": "char_guest1",
+                  "text": "I think I donated it.",
                   "outputs": [{ "targetNodeId": "node_24" }]
                 },
                 {
                   "id": "node_24",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Respectful. Great word. We love respectful. Sit. We'll make it easy for you to stay.",
-                  "stageDirections": "[Eli's voice is soft. Soft like a door closing.]",
+                  "text": "You— that was two hundred— why would you—",
                   "outputs": [{ "targetNodeId": "node_25" }]
                 },
                 {
                   "id": "node_25",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 1; Game.suspicion = Game.suspicion + 1; Game.roomMood = 'tight_smile';",
-                  "outputs": [{ "targetNodeId": "node_60" }]
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "I didn't. I'm kidding. I don't know where your coat is, Eli.",
+                  "outputs": [{ "targetNodeId": "node_26" }]
                 },
                 {
                   "id": "node_26",
-                  "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "It's not a scene. It's just… timing. I'm trying to not be weird about it.",
-                  "stageDirections": "[You're being weird about it.]",
-                  "outputs": [{ "targetNodeId": "node_27" }]
-                },
-                {
-                  "id": "node_27",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "You're doing a great job not being weird. It's working so well I'm going to remember it.",
-                  "stageDirections": "[Mara marks you. You feel it.]",
-                  "outputs": [{ "targetNodeId": "node_28" }]
-                },
-                {
-                  "id": "node_28",
                   "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 2; Game.suspicion = Game.suspicion + 1; Game.roomMood = 'knife_in_velvet';",
+                  "instruction": "Game.tension = Game.tension + 1;",
                   "outputs": [{ "targetNodeId": "node_60" }]
                 },
-
                 {
                   "id": "node_30",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "I can tell you've both done a lot of work to make this feel effortless. It's impressive. It's also… very visible.",
-                  "stageDirections": "[You fire first. The room holds its breath.]",
+                  "text": "I'll hold it. I run cold. Always have.",
                   "outputs": [{ "targetNodeId": "node_31" }]
                 },
                 {
                   "id": "node_31",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 1; Game.roomMood = 'spark';",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "Do you? Eli runs hot. Don't you. He opens windows in February. I've stopped fighting it.",
                   "outputs": [{ "targetNodeId": "node_32" }]
                 },
                 {
                   "id": "node_32",
-                  "type": "condition",
-                  "condition": "Game.rapport_mara >= 1",
-                  "outputs": [
-                    { "label": "Landed", "targetNodeId": "node_33" },
-                    { "label": "Deflected", "targetNodeId": "node_36" }
-                  ]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "The human body is meant to— there's research. The Scandinavians— anyway. Different metabolisms.",
+                  "outputs": [{ "targetNodeId": "node_33" }]
                 },
                 {
                   "id": "node_33",
                   "type": "dialogueFragment",
                   "speaker": "char_guest1",
-                  "text": "Oh. We're doing honesty as a sport. Fun. Dangerous. I respect it.",
-                  "stageDirections": "[Dana leans forward. Interested.]",
+                  "text": "I'm always exactly the right temperature. It's my only skill.",
                   "outputs": [{ "targetNodeId": "node_34" }]
                 },
                 {
                   "id": "node_34",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "Tell me one thing you think we did wrong. Just one. Since we're being helpful.",
-                  "stageDirections": "[Mara's eyes sharpen. This is a game now.]",
-                  "outputs": [{ "targetNodeId": "node_35" }]
-                },
-                {
-                  "id": "node_35",
-                  "type": "hub",
-                  "outputs": [
-                    { "label": "FIGHT: Pick a detail (high risk)", "targetNodeId": "node_70" },
-                    { "label": "PERSUADE: Compliment sandwich", "targetNodeId": "node_72" },
-                    { "label": "STEALTH: Offer to help in kitchen", "targetNodeId": "node_74" }
-                  ]
-                },
-                {
-                  "id": "node_36",
-                  "type": "dialogueFragment",
-                  "speaker": "char_partner",
-                  "text": "Visible is a strong word. You mean you feel watched. That's a you thing. Sit down.",
-                  "stageDirections": "[Eli's warmth has edges now.]",
-                  "outputs": [{ "targetNodeId": "node_37" }]
-                },
-                {
-                  "id": "node_37",
                   "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 2; Game.suspicion = Game.suspicion + 1; Game.roomMood = 'cornered';",
+                  "instruction": "Game.suspicion = Game.suspicion + 1;",
                   "outputs": [{ "targetNodeId": "node_60" }]
                 },
-
                 {
                   "id": "node_40",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "Sorry. One second. Work thing. I'll just… step into the hall.",
-                  "stageDirections": "[The oldest trick. Still works sometimes.]",
+                  "text": "[You hand over the jacket without comment.]",
                   "outputs": [{ "targetNodeId": "node_41" }]
                 },
                 {
                   "id": "node_41",
-                  "type": "condition",
-                  "condition": "Game.suspicion < 1",
-                  "outputs": [
-                    { "label": "Clean exit", "targetNodeId": "node_42" },
-                    { "label": "Caught", "targetNodeId": "node_45" }
-                  ]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "This is— huh. What's in here? Rocks?",
+                  "outputs": [{ "targetNodeId": "node_42" }]
                 },
                 {
                   "id": "node_42",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Sure. Take your time. The door is a little… particular. Push gently.",
-                  "stageDirections": "[Mara waves you off. Too easy?]",
+                  "text": "Eli. Don't— you can't just— I'm sorry. He does this. Comments on weight. Of things.",
                   "outputs": [{ "targetNodeId": "node_43" }]
                 },
                 {
                   "id": "node_43",
-                  "type": "instruction",
-                  "instruction": "Game.suspicion = Game.suspicion + 0;",
-                  "outputs": [{ "targetNodeId": "node_91" }]
-                },
-                {
-                  "id": "node_45",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "Hallway's cold. Stay here. If it's work, put it on speaker. We love hearing work.",
-                  "stageDirections": "[Eli blocks without moving.]",
-                  "outputs": [{ "targetNodeId": "node_46" }]
+                  "text": "I'm just saying it's heavier than— that's an observation. Is that not allowed?",
+                  "outputs": [{ "targetNodeId": "node_44" }]
                 },
                 {
-                  "id": "node_46",
+                  "id": "node_44",
                   "type": "instruction",
-                  "instruction": "Game.suspicion = Game.suspicion + 1; Game.tension = Game.tension + 1;",
+                  "instruction": "Game.tension = Game.tension + 1; Game.suspicion = Game.suspicion + 1;",
                   "outputs": [{ "targetNodeId": "node_60" }]
                 },
-
                 {
                   "id": "node_60",
                   "type": "dialogueFragment",
-                  "speaker": "char_guest1",
-                  "text": "So. Drinks? Or are we doing emotional dehydration first?",
-                  "stageDirections": "[Dana breaks the tension. Or feeds it.]",
+                  "speaker": "char_host",
+                  "text": "Wine? We have— Dana brought the Sancerre, which needs to— and there's the Grüner Eli found at that place, the one that closed—",
                   "outputs": [{ "targetNodeId": "node_61" }]
                 },
                 {
                   "id": "node_61",
-                  "type": "hub",
-                  "outputs": [
-                    { "label": "PERSUADE: Offer to open wine", "targetNodeId": "node_62" },
-                    { "label": "FIGHT: Joke that lands too sharp", "targetNodeId": "node_64" },
-                    { "label": "STEALTH: Ask for bathroom", "targetNodeId": "node_66" }
-                  ]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "It didn't close. They moved. There's a difference.",
+                  "outputs": [{ "targetNodeId": "node_62" }]
                 },
                 {
                   "id": "node_62",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension - 1;",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "They moved to New Jersey. For wine purposes, that's closed.",
                   "outputs": [{ "targetNodeId": "node_63" }]
                 },
                 {
                   "id": "node_63",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "Oh, great. Someone competent. That's soothing. That's also suspicious.",
-                  "stageDirections": "[You earn a corkscrew. A weapon and a tool.]",
-                  "outputs": [{ "targetNodeId": "node_92" }]
+                  "type": "hub",
+                  "outputs": [
+                    { "label": "The Grüner sounds perfect.", "targetNodeId": "node_70" },
+                    { "label": "Water's fine for now.", "targetNodeId": "node_75" },
+                    { "label": "What else do you have?", "targetNodeId": "node_80" }
+                  ]
                 },
-                {
-                  "id": "node_64",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 1;",
-                  "outputs": [{ "targetNodeId": "node_65" }]
-                },
-                {
-                  "id": "node_65",
-                  "type": "dialogueFragment",
-                  "speaker": "char_partner",
-                  "text": "I love when a joke is also a diagnosis.",
-                  "stageDirections": "[Eli files that away.]",
-                  "outputs": [{ "targetNodeId": "node_93" }]
-                },
-                {
-                  "id": "node_66",
-                  "type": "instruction",
-                  "instruction": "Game.suspicion = Game.suspicion + 1;",
-                  "outputs": [{ "targetNodeId": "node_67" }]
-                },
-                {
-                  "id": "node_67",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "Bathroom is down the hall, first door. Don't open the second door. That's not a bathroom. That's a concept.",
-                  "stageDirections": "[Mara's smile says: I dare you.]",
-                  "outputs": [{ "targetNodeId": "node_91" }]
-                },
-
                 {
                   "id": "node_70",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "The music is perfect. Which is why it feels like it was picked to prevent silence.",
-                  "stageDirections": "[Direct hit. The room flinches.]",
+                  "text": "The Grüner sounds perfect. I trust your taste.",
                   "outputs": [{ "targetNodeId": "node_71" }]
                 },
                 {
                   "id": "node_71",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 2; Game.rapport_mara = Game.rapport_mara + 1;",
-                  "outputs": [{ "targetNodeId": "node_93" }]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "See? Someone— I spent forty minutes in that store. Before they moved.",
+                  "outputs": [{ "targetNodeId": "node_72" }]
                 },
                 {
                   "id": "node_72",
                   "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "Wrong is harsh. It's all beautiful. It's just… intensely curated. Like the room is holding its breath.",
-                  "stageDirections": "[Softer. Still true.]",
+                  "speaker": "char_host",
+                  "text": "Eli, the Grüner is for the fish. We discussed this. It's been breathing.",
                   "outputs": [{ "targetNodeId": "node_73" }]
                 },
                 {
                   "id": "node_73",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 1; Game.rapport_mara = Game.rapport_mara + 1; Game.roomMood = 'curious';",
-                  "outputs": [{ "targetNodeId": "node_92" }]
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "Wine doesn't— white wine doesn't need to— fine. Fine.",
+                  "outputs": [{ "targetNodeId": "node_74" }]
                 },
                 {
                   "id": "node_74",
-                  "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "Honestly, I should help. Where's your kitchen? I'm better when I have a task.",
-                  "stageDirections": "[Retreat disguised as service.]",
-                  "outputs": [{ "targetNodeId": "node_75" }]
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension + 1; Game.rapport_mara = Game.rapport_mara + 1;",
+                  "outputs": [{ "targetNodeId": "node_90" }]
                 },
                 {
                   "id": "node_75",
-                  "type": "instruction",
-                  "instruction": "Game.suspicion = Game.suspicion - 1;",
-                  "outputs": [{ "targetNodeId": "node_91" }]
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "Water's fine for now. I'll catch up.",
+                  "outputs": [{ "targetNodeId": "node_76" }]
                 },
-
+                {
+                  "id": "node_76",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "Catch up. That's ominous. Are you drinking competitively?",
+                  "outputs": [{ "targetNodeId": "node_77" }]
+                },
+                {
+                  "id": "node_77",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "No. I just— it came out wrong. Whatever's open.",
+                  "outputs": [{ "targetNodeId": "node_78" }]
+                },
+                {
+                  "id": "node_78",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "Nothing's open. That's why I asked. Eli, can you get the— the one from the thing.",
+                  "outputs": [{ "targetNodeId": "node_79" }]
+                },
+                {
+                  "id": "node_79",
+                  "type": "instruction",
+                  "instruction": "Game.suspicion = Game.suspicion + 1;",
+                  "outputs": [{ "targetNodeId": "node_90" }]
+                },
+                {
+                  "id": "node_80",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "What else do you have? I'm curious now.",
+                  "outputs": [{ "targetNodeId": "node_81" }]
+                },
+                {
+                  "id": "node_81",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "We have— okay. Red, white, orange— yes, orange wine is a thing, Eli made a face—",
+                  "outputs": [{ "targetNodeId": "node_82" }]
+                },
+                {
+                  "id": "node_82",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "I didn't make a face. I have a face. Sometimes it does things.",
+                  "outputs": [{ "targetNodeId": "node_83" }]
+                },
+                {
+                  "id": "node_83",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "Can I have more of what I'm having? I don't know what it is but I like it.",
+                  "outputs": [{ "targetNodeId": "node_84" }]
+                },
+                {
+                  "id": "node_84",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "That's the— Eli, which one did you give Dana?",
+                  "outputs": [{ "targetNodeId": "node_85" }]
+                },
+                {
+                  "id": "node_85",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "I don't remember. One of them. Does it matter? They're all good.",
+                  "outputs": [{ "targetNodeId": "node_86" }]
+                },
+                {
+                  "id": "node_86",
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension + 1;",
+                  "outputs": [{ "targetNodeId": "node_90" }]
+                },
                 {
                   "id": "node_90",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "Go. Just come back like you meant it.",
-                  "stageDirections": "[Permission. Conditional.]",
+                  "text": "Why don't we— let's move to the— the food needs another— everything needs time.",
+                  "stageDirections": "[Mara's smile flickers.]",
                   "outputs": [{ "targetNodeId": "node_91" }]
                 },
-
                 {
                   "id": "node_91",
                   "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "You step into the hallway. The air is colder than it should be. The second door is unlabeled. It feels like a dare.",
-                  "stageDirections": "[THE HALLWAY. Liminal space. Choices matter here.]",
-                  "outputs": [{ "targetNodeId": "node_94" }]
+                  "speaker": "char_guest1",
+                  "text": "So. How do you two know each other? Mara's been very— she hasn't said.",
+                  "outputs": [{ "targetNodeId": "node_92" }]
                 },
                 {
                   "id": "node_92",
                   "type": "dialogueFragment",
-                  "speaker": "char_guest1",
-                  "text": "I'm enjoying you. I don't know if that's good news for you, but it is information.",
-                  "stageDirections": "[Dana's approval is a currency. Spend it wisely.]",
+                  "speaker": "char_host",
+                  "text": "We met at— do you want to tell it, or should I?",
                   "outputs": [{ "targetNodeId": "node_93" }]
                 },
                 {
                   "id": "node_93",
-                  "type": "dialogueFragment",
-                  "speaker": "char_host",
-                  "text": "Let's eat. We can dissect everyone later. Like adults.",
-                  "stageDirections": "[Mara ends the round. For now.]",
-                  "outputs": [{ "targetNodeId": "node_95" }]
-                },
-                {
-                  "id": "node_94",
                   "type": "hub",
                   "outputs": [
-                    { "label": "STEALTH: Open the unlabeled door", "targetNodeId": "node_96" },
-                    { "label": "PERSUADE: Return immediately, grateful", "targetNodeId": "node_98" },
-                    { "label": "FIGHT: Call out the concept door loud", "targetNodeId": "node_99" }
+                    { "label": "You tell it. You're better at stories.", "targetNodeId": "node_100" },
+                    { "label": "We met through mutual— it's complicated.", "targetNodeId": "node_110" },
+                    { "label": "I don't actually remember.", "targetNodeId": "node_120" }
                   ]
                 },
-                {
-                  "id": "node_95",
-                  "type": "instruction",
-                  "instruction": "Game.roomMood = 'first_course';",
-                  "outputs": [{ "targetNodeId": "node_100" }]
-                },
-
-                {
-                  "id": "node_96",
-                  "type": "condition",
-                  "condition": "Game.suspicion < 2",
-                  "outputs": [
-                    { "label": "Door opens", "targetNodeId": "node_97" },
-                    { "label": "Door resists", "targetNodeId": "node_101" }
-                  ]
-                },
-                {
-                  "id": "node_97",
-                  "type": "dialogueFragment",
-                  "speaker": "char_p",
-                  "text": "Inside: a small hook with a key. Tagged with your name, in handwriting you don't recognize. You take it anyway.",
-                  "stageDirections": "[EXIT KEY ACQUIRED. But whose handwriting?]",
-                  "outputs": [{ "targetNodeId": "node_103" }]
-                },
-                {
-                  "id": "node_98",
-                  "type": "instruction",
-                  "instruction": "Game.rapport_mara = Game.rapport_mara + 1; Game.tension = Game.tension - 1;",
-                  "outputs": [{ "targetNodeId": "node_103" }]
-                },
-                {
-                  "id": "node_99",
-                  "type": "instruction",
-                  "instruction": "Game.tension = Game.tension + 2; Game.suspicion = Game.suspicion + 2;",
-                  "outputs": [{ "targetNodeId": "node_104" }]
-                },
-
                 {
                   "id": "node_100",
                   "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "Plates appear. Not served. Appearing is the more accurate verb.",
-                  "stageDirections": "[The wrongness begins. Subtle. Present.]",
-                  "outputs": [{ "targetNodeId": "node_105" }]
+                  "text": "You tell it. You're better at stories.",
+                  "outputs": [{ "targetNodeId": "node_101" }]
                 },
                 {
                   "id": "node_101",
                   "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "Am I? Okay. We met at— god, what was it. A fundraiser? No. A funeral. Was it a funeral?",
+                  "outputs": [{ "targetNodeId": "node_102" }]
+                },
+                {
+                  "id": "node_102",
+                  "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "The unlabeled door does not open. It politely fails. Like a customer support chat closing itself.",
-                  "stageDirections": "[Not yet. Not enough trust. Or too much suspicion.]",
+                  "text": "It was a bookstore. That closed. You were buying—",
                   "outputs": [{ "targetNodeId": "node_103" }]
                 },
                 {
                   "id": "node_103",
                   "type": "dialogueFragment",
                   "speaker": "char_host",
-                  "text": "There you are. I was about to come look for you. I didn't want to. That's the kind of guest I am.",
-                  "stageDirections": "[Mara appears. She always appears.]",
-                  "outputs": [{ "targetNodeId": "node_105" }]
+                  "text": "A bookstore! The one with the cat that bit people. I was buying— what was I buying?",
+                  "outputs": [{ "targetNodeId": "node_104" }]
                 },
                 {
                   "id": "node_104",
                   "type": "dialogueFragment",
                   "speaker": "char_partner",
-                  "text": "We said don't open it. You heard us say don't open it. This is interesting.",
-                  "stageDirections": "[Eli's disappointment is weaponized.]",
+                  "text": "Cookbooks. You always buy cookbooks. You have forty. You use three.",
                   "outputs": [{ "targetNodeId": "node_105" }]
                 },
                 {
                   "id": "node_105",
                   "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "I use more than— the point is, we met. We're here now.",
+                  "outputs": [{ "targetNodeId": "node_106" }]
+                },
+                {
+                  "id": "node_106",
+                  "type": "instruction",
+                  "instruction": "Game.rapport_mara = Game.rapport_mara + 1;",
+                  "outputs": [{ "targetNodeId": "node_130" }]
+                },
+                {
+                  "id": "node_110",
+                  "type": "dialogueFragment",
                   "speaker": "char_p",
-                  "text": "The first course begins. You survived the arrival. The labyrinth has only started to turn.",
-                  "stageDirections": "[END OF SCENE 1. Tension, suspicion, and rapport carry forward.]",
+                  "text": "We met through mutual— it's complicated. Overlapping circles.",
+                  "outputs": [{ "targetNodeId": "node_111" }]
+                },
+                {
+                  "id": "node_111",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "Overlapping circles. That sounds like a cult.",
+                  "outputs": [{ "targetNodeId": "node_112" }]
+                },
+                {
+                  "id": "node_112",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "It wasn't a— we're not in a— Dana, why would you—",
+                  "outputs": [{ "targetNodeId": "node_113" }]
+                },
+                {
+                  "id": "node_113",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "I'm joking. Although you did say overlapping circles out loud.",
+                  "outputs": [{ "targetNodeId": "node_114" }]
+                },
+                {
+                  "id": "node_114",
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension + 1; Game.suspicion = Game.suspicion + 1;",
+                  "outputs": [{ "targetNodeId": "node_130" }]
+                },
+                {
+                  "id": "node_120",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "I don't actually remember. Isn't that strange? I remember that we met.",
+                  "outputs": [{ "targetNodeId": "node_121" }]
+                },
+                {
+                  "id": "node_121",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "You don't— we were at the— I had on that green— you said you liked my—",
+                  "outputs": [{ "targetNodeId": "node_122" }]
+                },
+                {
+                  "id": "node_122",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "I remember the green. The rest is— fuzzy. Does that happen to you? Time collapsing?",
+                  "outputs": [{ "targetNodeId": "node_123" }]
+                },
+                {
+                  "id": "node_123",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "Time collapsing. Is that a medical thing?",
+                  "outputs": [{ "targetNodeId": "node_124" }]
+                },
+                {
+                  "id": "node_124",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "I think it's a metaphor, Eli.",
+                  "outputs": [{ "targetNodeId": "node_125" }]
+                },
+                {
+                  "id": "node_125",
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension + 2;",
+                  "outputs": [{ "targetNodeId": "node_130" }]
+                },
+                {
+                  "id": "node_130",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "I should check on— the thing needs— excuse me.",
+                  "stageDirections": "[Mara exits. The wooden spoon goes with her.]",
+                  "outputs": [{ "targetNodeId": "node_131" }]
+                },
+                {
+                  "id": "node_131",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "She's nervous. Don't— she wants tonight to be— you know how she gets.",
+                  "outputs": [{ "targetNodeId": "node_132" }]
+                },
+                {
+                  "id": "node_132",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "How does she get? I'm new here.",
+                  "outputs": [{ "targetNodeId": "node_133" }]
+                },
+                {
+                  "id": "node_133",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "She gets— focused. The butter has to be room temperature. There's a whole thing with the napkins.",
+                  "outputs": [{ "targetNodeId": "node_134" }]
+                },
+                {
+                  "id": "node_134",
+                  "type": "hub",
+                  "outputs": [
+                    { "label": "What thing with the napkins?", "targetNodeId": "node_140" },
+                    { "label": "Should I offer to help?", "targetNodeId": "node_150" },
+                    { "label": "(Excuse yourself)", "targetNodeId": "node_160" }
+                  ]
+                },
+                {
+                  "id": "node_140",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "What thing with the napkins?",
+                  "outputs": [{ "targetNodeId": "node_141" }]
+                },
+                {
+                  "id": "node_141",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "They have to be folded— there's a YouTube video. Seventeen minutes. I've seen it four times.",
+                  "outputs": [{ "targetNodeId": "node_142" }]
+                },
+                {
+                  "id": "node_142",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "Four times is a lot for napkins.",
+                  "outputs": [{ "targetNodeId": "node_143" }]
+                },
+                {
+                  "id": "node_143",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "That's what I— anyway. She cares. Even if the caring is— intense.",
+                  "outputs": [{ "targetNodeId": "node_144" }]
+                },
+                {
+                  "id": "node_144",
+                  "type": "instruction",
+                  "instruction": "Game.rapport_mara = Game.rapport_mara + 1;",
+                  "outputs": [{ "targetNodeId": "node_170" }]
+                },
+                {
+                  "id": "node_150",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "Should I offer to help? In the kitchen?",
+                  "outputs": [{ "targetNodeId": "node_151" }]
+                },
+                {
+                  "id": "node_151",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "No. God, no. There's a system. I moved a colander once. We didn't speak for a day.",
+                  "outputs": [{ "targetNodeId": "node_152" }]
+                },
+                {
+                  "id": "node_152",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "A colander? The thing with holes?",
+                  "outputs": [{ "targetNodeId": "node_153" }]
+                },
+                {
+                  "id": "node_153",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "It has a spot. Everything has a spot.",
+                  "outputs": [{ "targetNodeId": "node_154" }]
+                },
+                {
+                  "id": "node_154",
+                  "type": "instruction",
+                  "instruction": "Game.suspicion = Game.suspicion + 1;",
+                  "outputs": [{ "targetNodeId": "node_170" }]
+                },
+                {
+                  "id": "node_160",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "I'm going to— where's the—",
+                  "outputs": [{ "targetNodeId": "node_161" }]
+                },
+                {
+                  "id": "node_161",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "Down the hall. First door. Don't use the second door.",
+                  "outputs": [{ "targetNodeId": "node_162" }]
+                },
+                {
+                  "id": "node_162",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "What's behind the second door?",
+                  "outputs": [{ "targetNodeId": "node_163" }]
+                },
+                {
+                  "id": "node_163",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "His office. The radios. You can look but— actually, don't. They're in a delicate phase.",
+                  "outputs": [{ "targetNodeId": "node_164" }]
+                },
+                {
+                  "id": "node_164",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[You walk down the hall. The first door is marked. The second is not.]",
+                  "outputs": [{ "targetNodeId": "node_165" }]
+                },
+                {
+                  "id": "node_165",
+                  "type": "hub",
+                  "outputs": [
+                    { "label": "(First door. The bathroom.)", "targetNodeId": "node_180" },
+                    { "label": "(Second door. The radios.)", "targetNodeId": "node_190" },
+                    { "label": "(Stand in the hall. Listen.)", "targetNodeId": "node_200" }
+                  ]
+                },
+                {
+                  "id": "node_170",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "Okay! The first course is— it's nothing, really. Just a little—",
+                  "stageDirections": "[Mara returns. The wooden spoon is gone.]",
+                  "outputs": [{ "targetNodeId": "node_210" }]
+                },
+                {
+                  "id": "node_180",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[The bathroom is immaculate. There are three different hand soaps. All lavender.]",
+                  "outputs": [{ "targetNodeId": "node_181" }]
+                },
+                {
+                  "id": "node_181",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[You look at your face in the mirror. It looks tired. When did you start looking tired?]",
+                  "outputs": [{ "targetNodeId": "node_182" }]
+                },
+                {
+                  "id": "node_182",
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension - 1;",
+                  "outputs": [{ "targetNodeId": "node_210" }]
+                },
+                {
+                  "id": "node_190",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[The door opens. There are radios. So many radios. Some of them are on.]",
+                  "outputs": [{ "targetNodeId": "node_191" }]
+                },
+                {
+                  "id": "node_191",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[One of them is playing something. Static. Or music. Hard to tell.]",
+                  "outputs": [{ "targetNodeId": "node_192" }]
+                },
+                {
+                  "id": "node_192",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "I said don't— oh. You're in there. Okay. What do you think?",
+                  "stageDirections": "[Eli appears in the doorway.]",
+                  "outputs": [{ "targetNodeId": "node_193" }]
+                },
+                {
+                  "id": "node_193",
+                  "type": "hub",
+                  "outputs": [
+                    { "label": "It's impressive. How many are there?", "targetNodeId": "node_194" },
+                    { "label": "What is that one playing?", "targetNodeId": "node_196" },
+                    { "label": "I should go back—", "targetNodeId": "node_198" }
+                  ]
+                },
+                {
+                  "id": "node_194",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "It's impressive. How many are there?",
+                  "outputs": [{ "targetNodeId": "node_195" }]
+                },
+                {
+                  "id": "node_195",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "Forty-three. Forty-four if you count the one that doesn't— anyway. Forty-three working ones. Mara says it's a problem. I say it's a collection.",
+                  "outputs": [{ "targetNodeId": "node_199" }]
+                },
+                {
+                  "id": "node_196",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "What is that one playing?",
+                  "outputs": [{ "targetNodeId": "node_197" }]
+                },
+                {
+                  "id": "node_197",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "I don't know. It does that. Sometimes. Picks things up. Old signals, maybe. Or new ones that sound old. I've stopped asking.",
+                  "outputs": [{ "targetNodeId": "node_199" }]
+                },
+                {
+                  "id": "node_198",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "I should go back—",
+                  "outputs": [{ "targetNodeId": "node_199" }]
+                },
+                {
+                  "id": "node_199",
+                  "type": "instruction",
+                  "instruction": "Game.suspicion = Game.suspicion + 2; Game.rapport_mara = Game.rapport_mara - 1;",
+                  "outputs": [{ "targetNodeId": "node_210" }]
+                },
+                {
+                  "id": "node_200",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[You stand in the hall. From the kitchen, voices.]",
+                  "outputs": [{ "targetNodeId": "node_201" }]
+                },
+                {
+                  "id": "node_201",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "—don't know why I invited them. I don't. It seemed like— at the time it seemed like—",
+                  "stageDirections": "[Mara's voice, muffled through the door.]",
+                  "outputs": [{ "targetNodeId": "node_202" }]
+                },
+                {
+                  "id": "node_202",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "—fine. Everything's fine. You always do this. You invite people and then—",
+                  "stageDirections": "[Dana's voice, also muffled.]",
+                  "outputs": [{ "targetNodeId": "node_203" }]
+                },
+                {
+                  "id": "node_203",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "—I'm not— I just— there's something about them that— I can't explain it—",
+                  "outputs": [{ "targetNodeId": "node_204" }]
+                },
+                {
+                  "id": "node_204",
+                  "type": "instruction",
+                  "instruction": "Game.tension = Game.tension + 2; Game.suspicion = Game.suspicion + 1;",
+                  "outputs": [{ "targetNodeId": "node_210" }]
+                },
+                {
+                  "id": "node_210",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "There you are! We were just— we should eat. Before it gets— things can get cold. Or hot. Depending on what they're supposed to be.",
+                  "outputs": [{ "targetNodeId": "node_211" }]
+                },
+                {
+                  "id": "node_211",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[The table is set. The napkins are folded into shapes you don't recognize.]",
+                  "outputs": [{ "targetNodeId": "node_212" }]
+                },
+                {
+                  "id": "node_212",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "Mara. These napkins. They're— what are they supposed to be?",
+                  "outputs": [{ "targetNodeId": "node_213" }]
+                },
+                {
+                  "id": "node_213",
+                  "type": "dialogueFragment",
+                  "speaker": "char_host",
+                  "text": "Swans. They're swans. Or they were supposed to— you can't tell they're swans?",
+                  "outputs": [{ "targetNodeId": "node_214" }]
+                },
+                {
+                  "id": "node_214",
+                  "type": "dialogueFragment",
+                  "speaker": "char_partner",
+                  "text": "They look like swans. Very swan-like.",
+                  "outputs": [{ "targetNodeId": "node_215" }]
+                },
+                {
+                  "id": "node_215",
+                  "type": "dialogueFragment",
+                  "speaker": "char_guest1",
+                  "text": "I thought they were— never mind. Swans. Yes. I see it now.",
+                  "outputs": [{ "targetNodeId": "node_216" }]
+                },
+                {
+                  "id": "node_216",
+                  "type": "dialogueFragment",
+                  "speaker": "char_p",
+                  "text": "[The first course arrives. It is very small. Almost conceptually small.]",
+                  "stageDirections": "[END OF SCENE 1]",
                   "outputs": []
                 }
               ]
