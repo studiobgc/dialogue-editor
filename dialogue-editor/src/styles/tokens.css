@@ -1,0 +1,185 @@
+/**
+ * Design Tokens - Dialogue Editor
+ * 
+ * A utilitarian design system inspired by:
+ * - VS Code (functional, dense information)
+ * - Linear (clean, purposeful)
+ * - Figma (professional tools)
+ * 
+ * Principles:
+ * - Information density over decoration
+ * - Consistent spacing scale
+ * - Purposeful color usage
+ * - Typography that works at small sizes
+ */
+
+:root {
+  /* ========================================
+     COLOR TOKENS - Semantic naming
+     ======================================== */
+  
+  /* Surfaces - from darkest to lightest */
+  --surface-ground: #0d0d0d;
+  --surface-base: #141414;
+  --surface-raised: #1a1a1a;
+  --surface-overlay: #1f1f1f;
+  --surface-elevated: #252525;
+  
+  /* Borders */
+  --border-subtle: #2a2a2a;
+  --border-default: #333333;
+  --border-strong: #444444;
+  --border-focus: #0066cc;
+  
+  /* Text */
+  --text-primary: #e5e5e5;
+  --text-secondary: #999999;
+  --text-tertiary: #666666;
+  --text-disabled: #4d4d4d;
+  --text-inverse: #0d0d0d;
+  
+  /* Interactive */
+  --interactive-default: #0066cc;
+  --interactive-hover: #0077ee;
+  --interactive-active: #0055aa;
+  --interactive-muted: rgba(0, 102, 204, 0.15);
+  
+  /* Status */
+  --status-success: #22863a;
+  --status-success-subtle: rgba(34, 134, 58, 0.15);
+  --status-warning: #b08800;
+  --status-warning-subtle: rgba(176, 136, 0, 0.15);
+  --status-error: #cb2431;
+  --status-error-subtle: rgba(203, 36, 49, 0.15);
+  --status-info: #0366d6;
+  --status-info-subtle: rgba(3, 102, 214, 0.15);
+  
+  /* MCP/AI - Purple accent for AI features */
+  --mcp-default: #8b5cf6;
+  --mcp-subtle: rgba(139, 92, 246, 0.15);
+  --mcp-glow: rgba(139, 92, 246, 0.4);
+  
+  /* Node type colors - functional, not decorative */
+  --node-dialogue: #3b82f6;
+  --node-dialogue-subtle: rgba(59, 130, 246, 0.15);
+  --node-hub: #f59e0b;
+  --node-hub-subtle: rgba(245, 158, 11, 0.15);
+  --node-condition: #10b981;
+  --node-condition-subtle: rgba(16, 185, 129, 0.15);
+  --node-instruction: #f97316;
+  --node-instruction-subtle: rgba(249, 115, 22, 0.15);
+  --node-jump: #8b5cf6;
+  --node-jump-subtle: rgba(139, 92, 246, 0.15);
+  
+  /* ========================================
+     SPACING TOKENS - 4px base unit
+     ======================================== */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  
+  /* ========================================
+     TYPOGRAPHY TOKENS
+     ======================================== */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  
+  /* Font sizes - compact for information density */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  /* Font weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  
+  /* ========================================
+     SIZING TOKENS
+     ======================================== */
+  --toolbar-height: 40px;
+  --statusbar-height: 24px;
+  --panel-width: 240px;
+  --panel-width-wide: 320px;
+  
+  /* ========================================
+     RADIUS TOKENS - Minimal rounding
+     ======================================== */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 9999px;
+  
+  /* ========================================
+     SHADOW TOKENS - Subtle depth
+     ======================================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.6);
+  
+  /* ========================================
+     TRANSITION TOKENS
+     ======================================== */
+  --transition-fast: 100ms ease;
+  --transition-normal: 150ms ease;
+  --transition-slow: 250ms ease;
+  
+  /* ========================================
+     Z-INDEX TOKENS
+     ======================================== */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Focus ring - consistent across all interactive elements */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--border-focus);
+}
+
+/* Truncate text */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
